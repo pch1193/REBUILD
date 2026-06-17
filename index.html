@@ -1111,7 +1111,7 @@ document.getElementById('importFile').onchange=e=>{
 /* ================= AI COACH (Gemini) ================= */
 const GEM_KEY='cfg:geminiKey';
 const gem={ key:LSget(GEM_KEY)||'', msgs:[], busy:false };
-const GEM_MODEL='gemini-2.0-flash';
+const GEM_MODEL='gemini-2.5-flash';
 
 function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function fmtMsg(t){ return escapeHtml(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'); }
