@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>REBUILD — 데일리 로그</title>
+<meta name="theme-color" content="#0F141A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="REBUILD">
+<meta name="application-name" content="REBUILD">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230F141A'/><path d='M28 72 V52 M50 72 V40 M72 72 V28' stroke='%23F2A93B' stroke-width='9' stroke-linecap='round' fill='none'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230F141A'/><path d='M28 72 V52 M50 72 V40 M72 72 V28' stroke='%23F2A93B' stroke-width='9' stroke-linecap='round' fill='none'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F141A; --elev:#141B23; --card:#18212C; --inset:#1E2935; --line:#2A3543;
+    --text:#EAF0F6; --muted:#93A1B0; --faint:#5E6E7E;
+    --amber:#F2A93B; --amber-soft:rgba(242,169,59,.14);
+    --teal:#57C4D6; --teal-soft:rgba(87,196,214,.13);
+    --green:#6FCF97; --green-soft:rgba(111,207,151,.13);
+    --violet:#A78BFA; --violet-soft:rgba(167,139,250,.13);
+    --red:#E8806B;
+    --font-d:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-b:'Inter',ui-sans-serif,system-ui,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-b);-webkit-font-smoothing:antialiased}
+  body{max-width:600px;margin:0 auto;padding:0 0 100px;min-height:100vh}
+  input,button,textarea,select{font-family:inherit;color:inherit;outline:none;border:none;background:none}
+  button{cursor:pointer}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:8px}
+  ::placeholder{color:var(--faint)}
+  .num{font-family:var(--font-d);font-variant-numeric:tabular-nums}
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--bg) 70%,rgba(15,20,26,.0));padding:18px 18px 8px}
+  .brand{display:flex;align-items:baseline;justify-content:space-between}
+  .logo{font-family:var(--font-d);font-weight:700;font-size:22px;letter-spacing:.16em;color:var(--text)}
+  .logo b{color:var(--amber)}
+  .tagline{font-size:11px;color:var(--faint);letter-spacing:.05em}
+  .saved{font-size:11px;color:var(--green);opacity:0;transition:opacity .3s;letter-spacing:.04em}
+  .saved.show{opacity:1}
+
+  .datebar{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px}
+  .datebar button{width:34px;height:34px;border-radius:10px;background:var(--inset);color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center}
+  .datebar button:active{transform:scale(.92)}
+  .dateinfo{text-align:center;min-width:160px}
+  .dateinfo .dnum{font-family:var(--font-d);font-weight:600;font-size:17px}
+  .dateinfo .dday{font-size:12px;color:var(--muted);margin-top:1px}
+  .today-pill{font-size:10px;color:var(--amber);border:1px solid var(--amber);padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+
+  /* ---------- 7-day strip ---------- */
+  .strip{display:flex;gap:6px;padding:14px 18px 4px}
+  .sday{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;padding:4px 0}
+  .sday .bar{width:100%;height:34px;border-radius:7px;background:var(--inset);position:relative;overflow:hidden;border:1px solid transparent}
+  .sday .bar .fill{position:absolute;left:0;right:0;bottom:0;background:var(--line)}
+  .sday.logged .bar .fill{background:var(--muted)}
+  .sday .dot{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%}
+  .sday .lbl{font-size:10px;color:var(--faint);font-family:var(--font-d)}
+  .sday.sel .bar{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft)}
+  .sday.sel .lbl{color:var(--amber)}
+
+  /* ---------- nav tabs ---------- */
+  .tabs{display:flex;gap:8px;padding:6px 18px 2px}
+  .tab{flex:1;text-align:center;padding:10px;border-radius:11px;font-size:13px;font-weight:600;color:var(--muted);background:var(--elev)}
+  .tab.active{background:var(--amber-soft);color:var(--amber)}
+
+  /* ---------- summary panel ---------- */
+  .panel{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px 6px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 8px;text-align:center}
+  .stat .v{font-family:var(--font-d);font-weight:600;font-size:19px;line-height:1.1}
+  .stat .u{font-size:10px;color:var(--faint);margin-left:1px}
+  .stat .k{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.02em}
+  .stat.sleep .v{color:var(--teal)} .stat.caf .v{color:var(--amber)}
+  .stat.vol .v{color:var(--violet)} .stat.pro .v{color:var(--green)}
+
+  /* ---------- cards ---------- */
+  main{padding:8px 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:12px}
+  .ch{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .ch .ic{width:8px;height:8px;border-radius:50%}
+  .ch h2{font-size:14px;font-weight:600;margin:0;letter-spacing:.01em}
+  .ch .meta{margin-left:auto;font-family:var(--font-d);font-size:13px;color:var(--muted)}
+  .ic.sleep{background:var(--teal)} .ic.caf{background:var(--amber)}
+  .ic.train{background:var(--violet)} .ic.body{background:var(--green)}
+  .ic.cond{background:var(--red)} .ic.note{background:var(--muted)}
+  .ic.run{background:var(--teal)}
+  .runtags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
+  .rtag{background:var(--inset);border:1px solid var(--line);border-radius:20px;padding:8px 13px;font-size:12.5px;color:var(--muted)}
+  .rtag:active{transform:scale(.95)}
+  .rtag.on{background:var(--teal-soft);color:var(--teal);border-color:var(--teal)}
+  .timewrap{display:flex;align-items:center;gap:5px}
+  .tinput.sm{width:62px;text-align:center}
+  .colon{color:var(--faint);font-family:var(--font-d)}
+  .pacebox{display:none;margin-top:13px;padding-top:13px;border-top:1px solid var(--line);gap:10px}
+  .pacebox.show{display:flex}
+  .pcell{flex:1;text-align:center}
+  .pcell .pv{font-family:var(--font-d);font-weight:600;font-size:20px;color:var(--teal)}
+  .pcell .pv small{font-size:11px;color:var(--muted);font-weight:500}
+  .pcell .pk{font-size:10px;color:var(--faint);margin-top:2px}
+  .sday .runmark{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:55%;height:3px;border-radius:2px;background:var(--teal);opacity:0}
+  .sday.hasrun .runmark{opacity:.9}
+
+  .field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .field:first-of-type{border-top:none}
+  .field label{font-size:13px;color:var(--muted)}
+  .tinput{background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:15px;text-align:right;width:110px;font-family:var(--font-d)}
+  .tinput.time{width:118px}
+  .unit{font-size:12px;color:var(--faint);min-width:20px}
+
+  .bigval{font-family:var(--font-d);font-weight:600;font-size:15px}
+  .bigval.teal{color:var(--teal)}
+  .sleepbreak{display:none;font-size:11.5px;color:var(--faint);font-family:var(--font-d);margin-top:8px;padding-top:9px;border-top:1px solid var(--line)}
+
+  /* caffeine */
+  .caf-total{display:flex;align-items:baseline;gap:6px;margin-bottom:12px}
+  .caf-total .n{font-family:var(--font-d);font-weight:700;font-size:34px;color:var(--amber)}
+  .caf-total .u{font-size:13px;color:var(--muted)}
+  .quick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+  .qbtn{background:var(--inset);border:1px solid var(--line);border-radius:20px;padding:8px 13px;font-size:12.5px;color:var(--text);display:flex;align-items:center;gap:5px}
+  .qbtn:active{transform:scale(.95)}
+  .qbtn small{color:var(--faint);font-family:var(--font-d)}
+  .custom-add{display:flex;gap:7px;align-items:center;margin-top:2px}
+  .custom-add input{flex:1;background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:14px;font-family:var(--font-d)}
+  .custom-add button{background:var(--amber-soft);color:var(--amber);border-radius:10px;padding:9px 14px;font-weight:600;font-size:13px}
+  .caf-items{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+  .caf-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);background:var(--inset);border-radius:9px;padding:7px 11px}
+  .caf-item .t{font-family:var(--font-d);color:var(--faint)}
+  .caf-item .x{margin-left:auto;color:var(--faint);font-size:15px;padding:0 4px}
+  .hint{font-size:11.5px;color:var(--red);margin-top:9px;display:none;line-height:1.4}
+  .hint.show{display:block}
+  .clearcaf{font-size:11px;color:var(--faint);background:none;margin-top:8px;text-decoration:underline}
+
+  /* training */
+  .typesel{display:flex;gap:7px;margin-bottom:6px}
+  .tbtn{flex:1;padding:11px 4px;border-radius:11px;background:var(--inset);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--muted)}
+  .tbtn[data-t="back"].on{background:var(--teal-soft);color:var(--teal);border-color:var(--teal)}
+  .tbtn[data-t="chest"].on{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+  .tbtn[data-t="legs"].on{background:var(--violet-soft);color:var(--violet);border-color:var(--violet)}
+  .tbtn[data-t="rest"].on{background:rgba(147,161,176,.13);color:var(--text);border-color:var(--muted)}
+
+  .preset{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 4px}
+  .preset .p{background:var(--inset);border:1px dashed var(--line);border-radius:9px;padding:7px 11px;font-size:12.5px;color:var(--muted)}
+  .preset .p:before{content:"+ ";color:var(--faint)}
+  .ex{background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+  .ex-h{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .ex-h input{flex:1;background:none;font-size:14px;font-weight:600;font-family:var(--font-b);padding:2px 0;border-bottom:1px solid transparent}
+  .ex-h input:focus{border-bottom-color:var(--line)}
+  .ex-h .exvol{font-family:var(--font-d);font-size:12px;color:var(--violet)}
+  .ex-h .bwbadge{font-family:var(--font-d);font-size:10px;color:var(--teal);background:var(--teal-soft);padding:2px 7px;border-radius:20px}
+  .ex-h .rm{color:var(--faint);font-size:16px;padding:0 4px}
+  .setrow{display:grid;grid-template-columns:24px 1fr 14px 1fr 22px;align-items:center;gap:6px;margin-top:6px}
+  .setrow .sn{font-family:var(--font-d);font-size:11px;color:var(--faint);text-align:center}
+  .setrow input{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;text-align:center;font-family:var(--font-d);width:100%}
+  .setrow .mul{text-align:center;color:var(--faint);font-size:12px}
+  .setrow .srm{color:var(--faint);text-align:center;font-size:15px}
+  .addset{margin-top:9px;font-size:12px;color:var(--violet);background:var(--violet-soft);border-radius:8px;padding:7px;width:100%}
+  .sessvol{display:flex;align-items:baseline;justify-content:space-between;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+  .sessvol .lab{font-size:12px;color:var(--muted)}
+  .sessvol .val{font-family:var(--font-d);font-weight:700;font-size:24px;color:var(--violet)}
+  .sessvol .val small{font-size:13px;color:var(--muted);font-weight:500}
+
+  /* protein bar */
+  .pbar{height:8px;background:var(--inset);border-radius:6px;overflow:hidden;margin-top:9px}
+  .pbar .pf{height:100%;background:var(--green);border-radius:6px;transition:width .3s}
+  .pmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:6px;font-family:var(--font-d)}
+
+  /* condition sliders */
+  .srow{padding:11px 0;border-top:1px solid var(--line)}
+  .srow:first-child{border-top:none}
+  .srow .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .srow .top span{font-size:13px;color:var(--muted)}
+  .srow .top b{font-family:var(--font-d);font-size:16px}
+  .scale{display:flex;gap:5px}
+  .scale .sv{flex:1;height:30px;border-radius:7px;background:var(--inset);border:1px solid var(--line);font-family:var(--font-d);font-size:12px;color:var(--faint)}
+  .scale.pain .sv.on{background:var(--red);border-color:var(--red);color:#1a1010}
+  .scale.energy .sv.on{background:var(--green);border-color:var(--green);color:#0f1a12}
+  .scale.stress .sv.on{background:var(--amber);border-color:var(--amber);color:#1a1408}
+
+  textarea.notes{width:100%;min-height:70px;background:var(--inset);border:1px solid var(--line);border-radius:11px;padding:12px;font-size:14px;line-height:1.5;resize:vertical}
+
+  /* ---------- trends ---------- */
+  .tcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:12px}
+  .tcard .th{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px}
+  .tcard .th h3{font-size:13px;margin:0;color:var(--muted);font-weight:600}
+  .tcard .th .now{font-family:var(--font-d);font-size:22px;font-weight:600}
+  .tcard .th .now small{font-size:12px;color:var(--muted)}
+  .chg{font-size:12px;font-family:var(--font-d);margin-left:6px}
+  .chg.down{color:var(--green)} .chg.up{color:var(--red)} .chg.flat{color:var(--faint)}
+  svg.spark{width:100%;height:64px;margin-top:8px;display:block;overflow:visible}
+  .wk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
+  .wk{background:var(--inset);border-radius:11px;padding:12px}
+  .wk .v{font-family:var(--font-d);font-weight:600;font-size:19px}
+  .wk .k{font-size:11px;color:var(--muted);margin-top:2px}
+  .volbars{display:flex;align-items:flex-end;gap:5px;height:80px;margin-top:10px}
+  .partblock{margin-top:16px}
+  .partblock:first-child{margin-top:6px}
+  .partlab{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:600}
+  .partnow{font-family:var(--font-d);font-size:14px}
+  .volbars .vb{flex:1;background:var(--violet-soft);border-radius:5px 5px 0 0;position:relative;min-height:3px}
+  .volbars .vb .cap{position:absolute;top:-15px;left:0;right:0;text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-d)}
+  .volbars .vb .dl{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:9px;color:var(--faint);font-family:var(--font-d)}
+  .recent{margin-top:6px}
+  .rrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line);font-size:12.5px}
+  .rrow .rd{font-family:var(--font-d);color:var(--muted);width:54px}
+  .rrow .tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+  .tag.back{background:var(--teal-soft);color:var(--teal)}
+  .tag.chest{background:var(--amber-soft);color:var(--amber)}
+  .tag.legs{background:var(--violet-soft);color:var(--violet)}
+  .tag.rest{background:rgba(147,161,176,.13);color:var(--muted)}
+  .rrow .rmeta{margin-left:auto;color:var(--faint);font-family:var(--font-d);font-size:11px;text-align:right;line-height:1.4}
+  .empty{text-align:center;color:var(--faint);font-size:13px;padding:30px 10px;line-height:1.6}
+
+  .hide{display:none !important}
+
+  /* ---------- AI chat ---------- */
+  .chatwrap{padding:0 18px}
+  .chatlog{display:flex;flex-direction:column;gap:10px;padding:14px 0 16px;min-height:48vh}
+  .msg{max-width:86%;padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.55;word-break:break-word}
+  .msg.user{align-self:flex-end;background:var(--amber-soft);border-bottom-right-radius:5px}
+  .msg.ai{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .msg.ai b{color:var(--amber)}
+  .msg.err{align-self:center;background:rgba(232,128,107,.12);color:var(--red);font-size:12.5px;max-width:100%;text-align:center}
+  .msg.typing{color:var(--muted)}
+  .chatbar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(15,20,26,0),var(--bg) 28%);display:flex;gap:8px;align-items:flex-end;padding:8px 18px 18px}
+  .chatbar textarea{flex:1;background:var(--inset);border:1px solid var(--line);border-radius:18px;padding:11px 15px;font-size:14px;resize:none;max-height:120px;line-height:1.45}
+  .chatbar button{width:40px;height:40px;border-radius:50%;background:var(--amber);color:#1a1408;font-size:19px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .chatbar button:disabled{opacity:.4}
+  .chat-setup{text-align:center;color:var(--muted);font-size:13.5px;line-height:1.7;padding:44px 26px}
+  .chat-setup b{color:var(--text)}
+  .chat-setup .cbtn{margin-top:16px;background:var(--amber-soft);color:var(--amber);border:1px solid rgba(242,169,59,.4);border-radius:11px;padding:11px 18px;font-weight:600;font-size:13px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 0 6px}
+  .chips .chip{background:var(--inset);border:1px solid var(--line);border-radius:18px;padding:8px 13px;font-size:12.5px;color:var(--muted)}
+
+  /* ---------- sync UI ---------- */
+  .hdr-right{display:flex;align-items:center;gap:10px}
+  .gear{position:relative;width:34px;height:34px;border-radius:10px;background:var(--inset);color:var(--muted);font-size:16px;display:flex;align-items:center;justify-content:center}
+  .gear:active{transform:scale(.92)}
+  .syncdot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 2px var(--bg)}
+  .syncdot.on{background:var(--green)} .syncdot.err{background:var(--red)} .syncdot.off{background:var(--faint)}
+
+  .syncbar{display:block;width:calc(100% - 36px);margin:8px 18px 0;text-align:left;background:var(--inset);border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:12.5px;color:var(--muted)}
+  .syncbar.warn{border-color:rgba(242,169,59,.4);color:var(--amber);background:var(--amber-soft)}
+  .syncbar.info{border-color:rgba(87,196,214,.4);color:var(--teal);background:var(--teal-soft)}
+  .syncbar:active{transform:scale(.99)}
+
+  .overlay{position:fixed;inset:0;z-index:50;background:rgba(8,11,15,.72);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:600px;max-height:92vh;overflow-y:auto;background:var(--elev);border-radius:22px 22px 0 0;border-top:1px solid var(--line);animation:rise .25s ease}
+  @keyframes rise{from{transform:translateY(30px);opacity:.4}to{transform:translateY(0);opacity:1}}
+  .sheet-h{position:sticky;top:0;background:var(--elev);display:flex;align-items:center;justify-content:space-between;padding:18px 18px 12px;border-bottom:1px solid var(--line)}
+  .sheet-h h2{font-size:16px;margin:0}
+  .sheet-h button{width:32px;height:32px;border-radius:9px;background:var(--inset);color:var(--muted);font-size:15px}
+  .sheet-body{padding:16px 18px 40px}
+  .sstatus{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted);margin-bottom:18px}
+  .sdot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex-shrink:0}
+  .sdot.on{background:var(--green)} .sdot.err{background:var(--red)}
+  .ssec{margin-bottom:22px}
+  .ssec h3{font-size:13px;margin:0 0 6px;color:var(--text)}
+  .smut{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 11px}
+  .smut code{background:var(--inset);padding:1px 5px;border-radius:5px;font-size:11px}
+  .srow{display:flex;gap:7px}
+  .srow input{flex:1;background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:14px;font-family:var(--font-d);min-width:0}
+  .srow2{display:flex;gap:9px}
+  .srow2 .sbtn{flex:1}
+  .sbtn{background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13px;font-weight:600;color:var(--text)}
+  .sbtn:active{transform:scale(.96)}
+  .sbtn.primary{background:var(--amber-soft);color:var(--amber);border-color:rgba(242,169,59,.4);width:100%;margin-top:10px}
+  textarea#cfgInput{width:100%;min-height:120px;background:var(--inset);border:1px solid var(--line);border-radius:11px;padding:12px;font-size:12px;font-family:var(--font-d);line-height:1.5;resize:vertical}
+  .smsg{font-size:12px;margin-top:9px;line-height:1.4;min-height:0}
+  .smsg.ok{color:var(--green)} .smsg.bad{color:var(--red)}
+  .shelp{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 14px;margin-top:8px}
+  .shelp summary{font-size:13px;font-weight:600;padding:12px 0;cursor:pointer;color:var(--teal)}
+  .shelp ol{margin:0 0 10px;padding-left:20px;font-size:12.5px;color:var(--muted);line-height:1.7}
+  .shelp li{margin-bottom:5px}
+  .shelp b{color:var(--text)}
+  pre#rulesText{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:11px;font-size:11px;font-family:var(--font-d);overflow-x:auto;color:var(--muted);line-height:1.5;white-space:pre}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div>
+      <div class="logo">RE<b>BUILD</b></div>
+      <div class="tagline">daily training & recovery</div>
+    </div>
+    <div class="hdr-right">
+      <span class="saved" id="saved">저장됨</span>
+      <button id="gear" class="gear" aria-label="동기화 설정"><span class="syncdot" id="syncDot"></span>⚙</button>
+    </div>
+  </div>
+  <div class="datebar">
+    <button id="prev" aria-label="이전 날">‹</button>
+    <div class="dateinfo">
+      <div class="dnum" id="dnum">—</div>
+      <div class="dday" id="dday"></div>
+    </div>
+    <button id="next" aria-label="다음 날">›</button>
+  </div>
+</header>
+
+<div class="strip" id="strip"></div>
+
+<div class="tabs">
+  <button class="tab active" id="tabToday">오늘</button>
+  <button class="tab" id="tabTrend">추세</button>
+  <button class="tab" id="tabAI">AI 코치</button>
+</div>
+
+<button id="syncBar" class="syncbar hide"></button>
+
+<!-- ================= TODAY ================= -->
+<div id="viewToday">
+  <div class="panel">
+    <div class="stat sleep"><div class="v" id="sSleep">—</div><div class="k">수면</div></div>
+    <div class="stat caf"><div class="v" id="sCaf">0</div><div class="k">카페인</div></div>
+    <div class="stat vol"><div class="v" id="sVol">0</div><div class="k">볼륨</div></div>
+    <div class="stat pro"><div class="v" id="sPro">0</div><div class="k">단백질</div></div>
+  </div>
+
+  <main>
+    <!-- sleep -->
+    <div class="card">
+      <div class="ch"><span class="ic sleep"></span><h2>수면</h2><span class="meta bigval teal" id="sleepDur">— h</span></div>
+      <div class="field"><label>입면 시각</label><input type="time" class="tinput time" id="bedtime"></div>
+      <div class="field"><label>기상 시각</label><input type="time" class="tinput time" id="waketime"></div>
+      <div class="field"><label>중간에 깬 시간</label><span><input type="number" inputmode="numeric" class="tinput" id="wakeMid" placeholder="0"> <span class="unit">분</span></span></div>
+      <div class="field"><label>낮잠</label><span><input type="number" inputmode="numeric" class="tinput" id="nap" placeholder="0"> <span class="unit">분</span></span></div>
+      <div class="sleepbreak" id="sleepBreak"></div>
+    </div>
+
+    <!-- caffeine -->
+    <div class="card">
+      <div class="ch"><span class="ic caf"></span><h2>카페인</h2></div>
+      <div class="caf-total"><span class="n" id="cafN">0</span><span class="u">mg</span></div>
+      <div class="quick">
+        <button class="qbtn" data-mg="50">더단백 <small>50</small></button>
+        <button class="qbtn" data-mg="80">아메리카노/샷 <small>80</small></button>
+        <button class="qbtn" data-mg="100">에너지드링크 <small>100</small></button>
+        <button class="qbtn" data-mg="40">녹차/연한 <small>40</small></button>
+      </div>
+      <div class="custom-add">
+        <input type="number" inputmode="numeric" id="cafCustom" placeholder="직접 입력 (mg)">
+        <button id="cafAdd">추가</button>
+      </div>
+      <div class="caf-items" id="cafItems"></div>
+      <button class="clearcaf" id="cafClear">전체 지우기</button>
+      <div class="hint" id="cafHint">⚠ 오후 3시 이후 카페인은 수면의 질을 떨어뜨려요. 저녁 더단백은 무카페인으로.</div>
+    </div>
+
+    <!-- training -->
+    <div class="card">
+      <div class="ch"><span class="ic train"></span><h2>운동</h2></div>
+      <div class="typesel">
+        <button class="tbtn" data-t="back">등</button>
+        <button class="tbtn" data-t="chest">가슴</button>
+        <button class="tbtn" data-t="legs">하체</button>
+        <button class="tbtn" data-t="rest">휴식</button>
+      </div>
+      <div class="preset" id="preset"></div>
+      <div id="exerciseList"></div>
+      <div class="sessvol">
+        <span class="lab">세션 총 볼륨</span>
+        <span class="val"><span id="sessVolN">0</span> <small>kg</small></span>
+      </div>
+    </div>
+
+    <!-- running -->
+    <div class="card">
+      <div class="ch"><span class="ic run"></span><h2>러닝 / 유산소</h2><span class="meta num" id="paceMeta">—</span></div>
+      <div class="runtags" id="runTags">
+        <button class="rtag" data-tag="easy">이지 · 존2</button>
+        <button class="rtag" data-tag="tempo">템포</button>
+        <button class="rtag" data-tag="interval">인터벌</button>
+        <button class="rtag" data-tag="long">롱런</button>
+      </div>
+      <div class="field"><label>거리</label><span><input type="number" inputmode="decimal" class="tinput" id="runDist" placeholder="—"> <span class="unit">km</span></span></div>
+      <div class="field"><label>시간</label><span class="timewrap"><input type="number" inputmode="numeric" class="tinput sm" id="runMin" placeholder="분"><span class="colon">:</span><input type="number" inputmode="numeric" class="tinput sm" id="runSec" placeholder="초"></span></div>
+      <div class="field"><label>평균 심박수</label><span><input type="number" inputmode="numeric" class="tinput" id="runHrAvg" placeholder="—"> <span class="unit">bpm</span></span></div>
+      <div class="field"><label>최고 심박수</label><span><input type="number" inputmode="numeric" class="tinput" id="runHrMax" placeholder="—"> <span class="unit">bpm</span></span></div>
+      <div class="pacebox" id="paceBox"></div>
+    </div>
+
+    <!-- body -->
+    <div class="card">
+      <div class="ch"><span class="ic body"></span><h2>신체</h2></div>
+      <div class="field"><label>체중</label><span><input type="number" inputmode="decimal" class="tinput" id="weight" placeholder="—"> <span class="unit">kg</span></span></div>
+      <div class="field"><label>허리둘레</label><span><input type="number" inputmode="decimal" class="tinput" id="waist" placeholder="—"> <span class="unit">cm</span></span></div>
+      <div class="field"><label>수분</label><span><input type="number" inputmode="decimal" class="tinput" id="water" placeholder="—"> <span class="unit">L</span></span></div>
+      <div class="field"><label>걸음 수</label><span><input type="number" inputmode="numeric" class="tinput" id="steps" placeholder="—"> <span class="unit">보</span></span></div>
+      <div class="field"><label>음주</label><span><input type="number" inputmode="numeric" class="tinput" id="alcohol" placeholder="0"> <span class="unit">잔</span></span></div>
+      <div class="field" style="display:block;border-top:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <label>단백질</label><span><input type="number" inputmode="numeric" class="tinput" id="protein" placeholder="0"> <span class="unit">g</span></span>
+        </div>
+        <div class="pbar"><div class="pf" id="proFill" style="width:0%"></div></div>
+        <div class="pmeta"><span id="proNow">0 g</span><span>목표 150 g</span></div>
+      </div>
+    </div>
+
+    <!-- condition -->
+    <div class="card">
+      <div class="ch"><span class="ic cond"></span><h2>컨디션</h2></div>
+      <div class="srow">
+        <div class="top"><span>어깨 통증</span><b id="painLbl" style="color:var(--red)">—</b></div>
+        <div class="scale pain" id="painScale"></div>
+      </div>
+      <div class="srow">
+        <div class="top"><span>에너지</span><b id="enLbl" style="color:var(--green)">—</b></div>
+        <div class="scale energy" id="enScale"></div>
+      </div>
+      <div class="srow">
+        <div class="top"><span>스트레스</span><b id="stLbl" style="color:var(--amber)">—</b></div>
+        <div class="scale stress" id="stScale"></div>
+      </div>
+      <div class="field" style="border-top:1px solid var(--line);margin-top:4px"><label>안정시 심박수</label><span><input type="number" inputmode="numeric" class="tinput" id="rhr" placeholder="—"> <span class="unit">bpm</span></span></div>
+    </div>
+
+    <!-- notes -->
+    <div class="card">
+      <div class="ch"><span class="ic note"></span><h2>메모</h2></div>
+      <textarea class="notes" id="notes" placeholder="오늘 컨디션, 통증 위치, 식단 메모…"></textarea>
+    </div>
+  </main>
+</div>
+
+<!-- ================= TRENDS ================= -->
+<div id="viewTrend" class="hide">
+  <main>
+    <div class="tcard">
+      <div class="th"><h3>체중</h3><div class="now"><span id="wNow">—</span><small> kg</small><span class="chg" id="wChg"></span></div></div>
+      <svg class="spark" id="wSpark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="tcard">
+      <div class="th"><h3>허리둘레</h3><div class="now"><span id="waNow">—</span><small> cm</small><span class="chg" id="waChg"></span></div></div>
+      <svg class="spark" id="waSpark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="tcard">
+      <div class="th"><h3>최근 7일</h3></div>
+      <div class="wk-grid">
+        <div class="wk"><div class="v" style="color:var(--teal)" id="wkSleep">—</div><div class="k">평균 수면</div></div>
+        <div class="wk"><div class="v" style="color:var(--amber)" id="wkCaf">—</div><div class="k">평균 카페인</div></div>
+        <div class="wk"><div class="v" style="color:var(--violet)" id="wkSess">—</div><div class="k">운동 세션</div></div>
+        <div class="wk"><div class="v" style="color:var(--green)" id="wkPro">—</div><div class="k">평균 단백질</div></div>
+      </div>
+    </div>
+    <div class="tcard">
+      <div class="th"><h3>러닝</h3><div class="now"><span id="runKm">—</span><small> km · 최근 7일</small></div></div>
+      <div class="wk-grid" style="margin-top:8px">
+        <div class="wk"><div class="v" style="color:var(--teal)" id="runLastPace">—</div><div class="k">최근 페이스 /km</div></div>
+        <div class="wk"><div class="v" style="color:var(--teal)" id="runAvgHr">—</div><div class="k">평균 심박</div></div>
+      </div>
+      <div class="recent" id="runRecent"></div>
+    </div>
+    <div class="tcard">
+      <div class="th"><h3>부위별 볼륨</h3></div>
+      <div id="partVols"></div>
+    </div>
+    <div class="tcard">
+      <div class="th"><h3>기록</h3></div>
+      <div class="recent" id="recent"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ================= AI COACH ================= -->
+<div id="viewAI" class="hide">
+  <div class="chatwrap">
+    <div class="chatlog" id="chatLog"></div>
+    <div class="chatbar">
+      <textarea id="chatInput" rows="1" placeholder="기록 기반으로 물어보세요…"></textarea>
+      <button id="chatSend" aria-label="보내기">↑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SETUP / SYNC ================= -->
+<div id="setupOverlay" class="overlay hide">
+  <div class="sheet">
+    <div class="sheet-h">
+      <h2>동기화 & 백업</h2>
+      <button id="setupClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sstatus" id="sStatusBox"><span class="sdot" id="sStatusDot"></span><span id="sStatusText">상태 확인 중…</span></div>
+
+      <section class="ssec">
+        <h3>1 · 동기화 코드</h3>
+        <p class="smut">두 기기에 같은 코드를 넣으면 기록이 연결돼요. 비밀번호처럼 다루세요. 한 번 만들고 다른 기기에 그대로 입력하면 됩니다.</p>
+        <div class="srow"><input id="codeInput" placeholder="동기화 코드" autocomplete="off" spellcheck="false"><button id="codeGen" class="sbtn">생성</button><button id="codeCopy" class="sbtn">복사</button></div>
+      </section>
+
+      <section class="ssec">
+        <h3>2 · Firebase 연결 키</h3>
+        <p class="smut">Firebase 콘솔에서 복사한 설정 코드를 통째로 붙여넣으세요. <code>{ apiKey: … }</code> 형태 그대로면 돼요.</p>
+        <textarea id="cfgInput" placeholder="여기에 firebaseConfig 붙여넣기" autocomplete="off" spellcheck="false"></textarea>
+        <button id="connectBtn" class="sbtn primary">연결하기</button>
+        <div class="smsg" id="connectMsg"></div>
+      </section>
+
+      <section class="ssec">
+        <h3>AI 코치 (Gemini)</h3>
+        <p class="smut">Google AI Studio(<code>aistudio.google.com/apikey</code>)에서 무료 Gemini API 키를 만들어 붙여넣으면, "AI 코치" 탭에서 내 기록을 바탕으로 질문할 수 있어요. 키는 이 기기에만 저장돼요.</p>
+        <div class="srow"><input id="gemKey" placeholder="Gemini API 키 (AIza…)" autocomplete="off" spellcheck="false"><button id="gemSave" class="sbtn">저장</button></div>
+        <div class="smsg" id="gemMsg"></div>
+      </section>
+
+      <section class="ssec">
+        <h3>백업</h3>
+        <p class="smut">가끔 파일로 저장해두면 안전해요. 다른 기기로 옮기거나 복구할 때 불러오기를 쓰세요.</p>
+        <div class="srow2">
+          <button id="exportBtn" class="sbtn">내보내기</button>
+          <button id="importBtn" class="sbtn">불러오기</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" class="hide">
+        <div class="smsg" id="backupMsg"></div>
+      </section>
+
+      <details class="shelp">
+        <summary>Firebase 처음 설정하는 법</summary>
+        <ol>
+          <li><b>console.firebase.google.com</b> 접속 → "프로젝트 만들기" (이름 아무거나, 애널리틱스는 꺼도 됨)</li>
+          <li>왼쪽 <b>빌드 → Firestore Database</b> → "데이터베이스 만들기" → 위치 선택 → <b>프로덕션 모드</b>로 시작</li>
+          <li><b>빌드 → Authentication</b> → "시작하기" → <b>익명(Anonymous)</b> 사용 설정</li>
+          <li>프로젝트 설정(⚙ 톱니) → 아래 <b>내 앱</b>에서 <b>웹 앱(&lt;/&gt;)</b> 추가 → 닉네임 입력 → 나오는 <b>firebaseConfig</b> 복사 → 위 2번 칸에 붙여넣기</li>
+          <li>Firestore <b>규칙(Rules)</b> 탭에 아래를 붙여넣고 게시:</li>
+        </ol>
+        <pre id="rulesText">rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    match /rebuild/{code}/days/{day} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}</pre>
+        <button id="rulesCopy" class="sbtn">규칙 복사</button>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* ---------- storage wrapper (falls back to memory if runtime absent) ---------- */
+const store = {
+  mem:{},
+  get ok(){ try{ const t='__t'; localStorage.setItem(t,'1'); localStorage.removeItem(t); return true; }catch(e){ return false; } },
+  async get(k){ if(this.ok){ try{ return localStorage.getItem(k); }catch(e){ return null; } } return this.mem[k]??null; },
+  async set(k,v){ if(this.ok){ try{ localStorage.setItem(k,v); return true; }catch(e){ console.error(e); return false; } } this.mem[k]=v; return true; },
+  async list(p){ if(this.ok){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(key&&key.indexOf(p)===0) out.push(key); } }catch(e){} return out; } return Object.keys(this.mem).filter(x=>x.startsWith(p)); }
+};
+const KEY = d => 'day:'+d;
+const PRESETS = {
+  back:['랫풀다운','케이블로우','턱걸이'],
+  chest:['밀프 (OHP)','벤치프레스','인클라인'],
+  legs:['트랩바 데드리프트']
+};
+const PROTEIN_TARGET = 150;
+
+/* ---------- date helpers ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const DOW=['일','월','화','수','목','금','토'];
+function parseD(s){const[y,m,dd]=s.split('-').map(Number);return new Date(y,m-1,dd);}
+function todayStr(){return fmt(new Date());}
+
+function blankDay(date){return{date,bedtime:'',waketime:'',wakeMid:null,nap:null,caffeine:{items:[]},workout:{type:null,exercises:[]},run:{dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null},body:{weight:null,waist:null,protein:null,water:null,steps:null,alcohol:null},cond:{pain:null,energy:null,rhr:null,stress:null},notes:''};}
+function normDay(d){ d=d||{}; if(d.wakeMid===undefined)d.wakeMid=null; if(d.nap===undefined)d.nap=null; d.caffeine=d.caffeine||{items:[]}; d.workout=d.workout||{type:null,exercises:[]}; d.run=d.run||{dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null}; d.body=d.body||{weight:null,waist:null,protein:null}; if(d.body.water===undefined)d.body.water=null; if(d.body.steps===undefined)d.body.steps=null; if(d.body.alcohol===undefined)d.body.alcohol=null; d.cond=d.cond||{pain:null,energy:null}; if(d.cond.rhr===undefined)d.cond.rhr=null; if(d.cond.stress===undefined)d.cond.stress=null; if(d.notes==null)d.notes=''; return d; }
+
+let cur=todayStr();
+let state=blankDay(cur);
+let cache={}; // date -> day
+
+/* ---------- compute ---------- */
+function sleepMinutes(d){ if(!d.bedtime||!d.waketime) return null; const[bh,bm]=d.bedtime.split(':').map(Number),[wh,wm]=d.waketime.split(':').map(Number); let mins=(wh*60+wm)-(bh*60+bm); if(mins<=0)mins+=1440; mins-=(+d.wakeMid||0); return Math.max(0,mins); }
+function napMin(d){ return +d.nap||0; }
+function totalSleepMin(d){ const n=sleepMinutes(d), nap=napMin(d); if(n==null && !nap) return null; return (n||0)+nap; }
+function fmtH(m){ if(m==null) return null; return (m/60).toFixed(1); }
+function cafTotal(d){ return (d.caffeine.items||[]).reduce((a,i)=>a+ (i.mg||0),0); }
+const DEFAULT_BW=75;
+function exIsBW(ex){ const n=(ex.name||'').toLowerCase(); return /턱걸이|풀업|친업|pull|chin|딥스|딥|dips?|푸시업|푸쉬업|push/.test(n); }
+function getBW(date){
+  if(date===cur && state&&state.body&&state.body.weight) return +state.body.weight;
+  if(cache[date]&&cache[date].body&&cache[date].body.weight) return +cache[date].body.weight;
+  const ds=Object.keys(cache).filter(x=>x<=date).sort();
+  for(let i=ds.length-1;i>=0;i--){ const w=cache[ds[i]].body&&cache[ds[i]].body.weight; if(w) return +w; }
+  const any=Object.values(cache).map(d=>d.body&&d.body.weight).filter(Boolean); if(any.length) return +any[any.length-1];
+  return DEFAULT_BW;
+}
+function exVol(ex,bw){ const base=exIsBW(ex)?(+bw||0):0; return (ex.sets||[]).reduce((a,s)=>a+(((+s.w||0)+base)*(+s.r||0)),0); }
+function sessionVol(d){ const bw=getBW(d.date); return (d.workout.exercises||[]).reduce((a,e)=>a+exVol(e,bw),0); }
+function isLogged(d){ if(!d) return false; const r=d.run||{}, b=d.body||{}, c=d.cond||{}; return !!(d.bedtime||d.waketime||d.wakeMid||d.nap||cafTotal(d)>0||(d.workout&&d.workout.type)||runSecs(d)||r.dist||r.hrAvg||b.weight||b.waist||b.protein||b.water||b.steps||b.alcohol||(c.pain!=null)||(c.energy!=null)||(c.stress!=null)||c.rhr||d.notes); }
+function runSecs(d){ const r=d.run||{}; const s=(+r.min||0)*60+(+r.sec||0); return s; }
+function runPace(d){ const r=d.run||{}; const s=runSecs(d), km=+r.dist; if(!s||!km) return null; const p=s/km; return {m:Math.floor(p/60), s:Math.round(p%60), raw:p}; }
+function fmtPace(d){ const p=runPace(d); return p? `${p.m}:${pad(p.s)}` : null; }
+
+/* ---------- save (debounced) ---------- */
+let saveT;
+function scheduleSave(){ clearTimeout(saveT); saveT=setTimeout(doSave,500); }
+async function doSave(){
+  cache[state.date]=JSON.parse(JSON.stringify(state));
+  await store.set(KEY(state.date), JSON.stringify(state));
+  sync.push(state.date, state);
+  const s=document.getElementById('saved'); s.classList.add('show'); setTimeout(()=>s.classList.remove('show'),1100);
+  renderStrip();
+}
+
+/* ---------- load ---------- */
+async function loadDay(date){
+  if(cache[date]) return normDay(JSON.parse(JSON.stringify(cache[date])));
+  const raw=await store.get(KEY(date));
+  if(raw){ try{ const d=JSON.parse(raw); cache[date]=d; return normDay(JSON.parse(JSON.stringify(d))); }catch(e){} }
+  return blankDay(date);
+}
+async function loadAll(){
+  const keys=await store.list('day:');
+  for(const k of keys){ const raw=await store.get(k); if(raw){ try{ const d=JSON.parse(raw); cache[d.date]=d; }catch(e){} } }
+}
+
+/* ================= SYNC (Firebase) ================= */
+function LSget(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function LSset(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+const CFG_KEY='cfg:firebase', CODE_KEY='cfg:syncCode';
+function isEditing(){ const a=document.activeElement; return a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'); }
+
+const sync={
+  db:null, code:null, configured:false, connected:false, error:'', unsub:null, primed:false, pendingRefresh:false,
+  parseConfig(text){ if(!text) return null; let t=text.trim();
+    const i=t.indexOf('{'), j=t.lastIndexOf('}'); if(i>=0&&j>i) t=t.slice(i,j+1);
+    try{ return Function('return ('+t+')')(); }catch(e){ try{ return JSON.parse(t); }catch(e2){ return null; } } },
+  async init(){
+    const cfgRaw=LSget(CFG_KEY), code=LSget(CODE_KEY);
+    if(cfgRaw&&code&&typeof firebase!=='undefined'){ const cfg=this.parseConfig(cfgRaw); if(cfg){ await this.connect(cfg,code); } }
+    this.render();
+  },
+  async connect(cfg,code){
+    if(typeof firebase==='undefined'){ this.error='Firebase를 불러오지 못했어요 (인터넷/호스팅 필요)'; this.render(); return false; }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(cfg);
+      this.db=firebase.firestore();
+      await firebase.auth().signInAnonymously();
+      this.code=code; this.configured=true; this.error='';
+      this.primed=false;
+      this.subscribe();
+      this.connected=true; this.render(); return true;
+    }catch(e){ console.error(e); this.connected=false; this.error=(e&&e.message)||'연결 실패'; this.render(); return false; }
+  },
+  col(){ return this.db.collection('rebuild').doc(this.code).collection('days'); },
+  subscribe(){
+    if(this.unsub) this.unsub();
+    this.unsub=this.col().onSnapshot(snap=>{
+      let changed=false, curHit=false;
+      snap.docChanges().forEach(ch=>{
+        if(ch.type==='removed') return;
+        const date=ch.doc.id, data=ch.doc.data();
+        const localStr=cache[date]?JSON.stringify(cache[date]):null, remoteStr=JSON.stringify(data);
+        if(localStr!==remoteStr){ cache[date]=data; LSset(KEY(date),remoteStr); changed=true; if(date===cur) curHit=true; }
+      });
+      if(!this.primed){ this.primed=true; this.pushLocalOnly(snap); }
+      if(changed){ renderStrip();
+        const trendOpen=!document.getElementById('viewTrend').classList.contains('hide');
+        if(trendOpen) renderTrends();
+        if(curHit){
+          if(isEditing()){ this.pendingRefresh=true; this.render(); }
+          else { state=normDay(cache[cur]?JSON.parse(JSON.stringify(cache[cur])):blankDay(cur)); renderAll(); }
+        }
+      }
+    }, err=>{ console.error(err); this.connected=false; this.error=(err&&err.message)||'동기화 오류'; this.render(); });
+  },
+  pushLocalOnly(snap){
+    const remote=new Set(snap.docs.map(d=>d.id));
+    Object.values(cache).forEach(d=>{ if(d&&d.date&&!remote.has(d.date)&&isLogged(d)) this.push(d.date,d); });
+  },
+  push(date,day){ if(!this.connected||!this.db) return; try{ this.col().doc(date).set(JSON.parse(JSON.stringify(day))); }catch(e){ console.error(e); } },
+  render(){
+    // gear dot
+    const dot=document.getElementById('syncDot');
+    dot.className='syncdot '+(this.connected?'on':this.error?'err':'off');
+    // overlay status
+    const sd=document.getElementById('sStatusDot'), st=document.getElementById('sStatusText');
+    if(sd&&st){ if(this.connected){ sd.className='sdot on'; st.textContent='연결됨 · 실시간 동기화 중'; }
+      else if(this.error){ sd.className='sdot err'; st.textContent='오류: '+this.error; }
+      else { sd.className='sdot'; st.textContent='이 기기에만 저장 중 (미설정)'; } }
+    // sync bar
+    const bar=document.getElementById('syncBar');
+    if(this.pendingRefresh){ bar.className='syncbar info'; bar.textContent='↻ 다른 기기에서 업데이트됨 · 탭하여 불러오기'; bar.classList.remove('hide'); }
+    else if(!this.configured && !this.error){ bar.className='syncbar warn'; bar.textContent='⚠ 이 기기에만 저장 중 · 탭하여 동기화 켜기'; bar.classList.remove('hide'); }
+    else if(this.error){ bar.className='syncbar warn'; bar.textContent='⚠ 동기화 오류 · 탭하여 설정 열기'; bar.classList.remove('hide'); }
+    else { bar.classList.add('hide'); }
+  },
+  applyRefresh(){ this.pendingRefresh=false; state=normDay(cache[cur]?JSON.parse(JSON.stringify(cache[cur])):blankDay(cur)); renderAll(); this.render(); }
+};
+function genCode(){ const a=new Uint8Array(12); (crypto.getRandomValues?crypto.getRandomValues(a):a.forEach((_,i)=>a[i]=Math.random()*256));
+  const s=Array.from(a,b=>('0'+b.toString(16)).slice(-2)).join(''); return s.match(/.{1,4}/g).slice(0,5).join('-'); }
+
+/* ---------- render: header + strip ---------- */
+function renderHeader(){
+  const d=parseD(cur);
+  document.getElementById('dnum').innerHTML = `${d.getMonth()+1}월 ${d.getDate()}일`+(cur===todayStr()?'<span class="today-pill">오늘</span>':'');
+  document.getElementById('dday').textContent = `${d.getFullYear()} · ${DOW[d.getDay()]}요일`;
+  document.getElementById('next').style.visibility = (cur>=todayStr())?'hidden':'visible';
+}
+function renderStrip(){
+  const wrap=document.getElementById('strip'); wrap.innerHTML='';
+  const base=parseD(todayStr());
+  for(let i=6;i>=0;i--){
+    const dt=new Date(base); dt.setDate(base.getDate()-i); const ds=fmt(dt);
+    const d=cache[ds]; const logged=isLogged(d); const hasRun=d&&(runSecs(d)||(d.run&&d.run.dist));
+    const el=document.createElement('button'); el.className='sday'+(logged?' logged':'')+(ds===cur?' sel':'')+(hasRun?' hasrun':'');
+    let fillH=14; if(logged){ const sv=d?sessionVol(d):0; fillH=Math.min(100, 24+ (sv? Math.min(70, sv/120):0)); }
+    const type = d&&d.workout&&d.workout.type;
+    const dotColor = type==='back'?'var(--teal)':type==='chest'?'var(--amber)':type==='legs'?'var(--violet)':type==='rest'?'var(--faint)':'transparent';
+    el.innerHTML=`<div class="bar"><div class="dot" style="background:${dotColor}"></div><div class="fill" style="height:${logged?fillH:0}%"></div><div class="runmark"></div></div><div class="lbl">${DOW[dt.getDay()]}</div>`;
+    el.onclick=()=>switchDate(ds);
+    wrap.appendChild(el);
+  }
+}
+
+/* ---------- render: today summary ---------- */
+function renderSummary(){
+  const sm=totalSleepMin(state); document.getElementById('sSleep').innerHTML = sm!=null?`${fmtH(sm)}<span class="u">h</span>`:'—';
+  document.getElementById('sCaf').textContent = cafTotal(state);
+  document.getElementById('sVol').textContent = sessionVol(state)||0;
+  document.getElementById('sPro').textContent = state.body.protein||0;
+}
+
+/* ---------- render: sleep ---------- */
+function renderSleep(){
+  document.getElementById('bedtime').value=state.bedtime||'';
+  document.getElementById('waketime').value=state.waketime||'';
+  document.getElementById('wakeMid').value=state.wakeMid??'';
+  document.getElementById('nap').value=state.nap??'';
+  const tot=totalSleepMin(state);
+  document.getElementById('sleepDur').textContent = tot!=null?`${fmtH(tot)} h`:'— h';
+  const br=document.getElementById('sleepBreak'); const night=sleepMinutes(state), nap=napMin(state);
+  if(nap>0 && night!=null){ br.textContent=`밤 ${fmtH(night)}h + 낮잠 ${nap}분`; br.style.display='block'; }
+  else { br.style.display='none'; }
+}
+
+/* ---------- render: caffeine ---------- */
+function renderCaf(){
+  const total=cafTotal(state);
+  document.getElementById('cafN').textContent=total;
+  const wrap=document.getElementById('cafItems'); wrap.innerHTML='';
+  (state.caffeine.items||[]).forEach((it,idx)=>{
+    const row=document.createElement('div'); row.className='caf-item';
+    row.innerHTML=`<span class="t">${it.time||''}</span><span>${it.mg} mg</span><button class="x" data-i="${idx}" aria-label="삭제">×</button>`;
+    wrap.appendChild(row);
+  });
+  // late caffeine hint
+  const late=(state.caffeine.items||[]).some(it=>{ if(!it.time) return false; const h=+it.time.split(':')[0]; return h>=15; });
+  document.getElementById('cafHint').classList.toggle('show', late);
+}
+function addCaf(mg){
+  if(!mg||mg<=0) return;
+  const now=new Date(); const time = cur===todayStr()? `${pad(now.getHours())}:${pad(now.getMinutes())}` : '';
+  state.caffeine.items=state.caffeine.items||[]; state.caffeine.items.push({mg:+mg,time});
+  renderCaf(); renderSummary(); scheduleSave();
+}
+
+/* ---------- render: training ---------- */
+function renderTypeAndPreset(){
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.toggle('on', b.dataset.t===state.workout.type));
+  const pre=document.getElementById('preset'); pre.innerHTML='';
+  const list = PRESETS[state.workout.type]||[];
+  list.forEach(name=>{ const b=document.createElement('button'); b.className='p'; b.textContent=name; b.onclick=()=>addExercise(name); pre.appendChild(b); });
+  if(state.workout.type && state.workout.type!=='rest'){
+    const b=document.createElement('button'); b.className='p'; b.textContent='직접 추가'; b.onclick=()=>addExercise(''); pre.appendChild(b);
+  }
+}
+function renderExercises(){
+  const wrap=document.getElementById('exerciseList'); wrap.innerHTML='';
+  const bw=getBW(cur);
+  (state.workout.exercises||[]).forEach((ex,ei)=>{
+    const isBW=exIsBW(ex);
+    const card=document.createElement('div'); card.className='ex';
+    let setsHtml='';
+    (ex.sets||[]).forEach((s,si)=>{
+      setsHtml+=`<div class="setrow"><span class="sn">${si+1}</span>
+        <input inputmode="decimal" data-ei="${ei}" data-si="${si}" data-f="w" value="${s.w??''}" placeholder="${isBW?'+kg':'kg'}">
+        <span class="mul">×</span>
+        <input inputmode="numeric" data-ei="${ei}" data-si="${si}" data-f="r" value="${s.r??''}" placeholder="회">
+        <button class="srm" data-act="rmset" data-ei="${ei}" data-si="${si}" aria-label="세트 삭제">×</button></div>`;
+    });
+    card.innerHTML=`<div class="ex-h">
+        <input data-ei="${ei}" data-f="name" value="${ex.name||''}" placeholder="종목명">
+        ${isBW?`<span class="bwbadge">체중 ${bw}</span>`:''}
+        <span class="exvol">${exVol(ex,bw)||0} kg</span>
+        <button class="rm" data-act="rmex" data-ei="${ei}" aria-label="종목 삭제">🗑</button></div>
+      ${setsHtml}
+      <button class="addset" data-act="addset" data-ei="${ei}">+ 세트 추가</button>`;
+    wrap.appendChild(card);
+  });
+  document.getElementById('sessVolN').textContent=sessionVol(state)||0;
+}
+function addExercise(name){
+  state.workout.exercises=state.workout.exercises||[];
+  state.workout.exercises.push({name,sets:[{w:'',r:''}]});
+  renderExercises(); renderSummary(); scheduleSave();
+}
+
+/* ---------- render: running ---------- */
+function renderRun(){
+  const r=state.run||(state.run={dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null});
+  document.getElementById('runDist').value=r.dist??'';
+  document.getElementById('runMin').value=r.min??'';
+  document.getElementById('runSec').value=r.sec??'';
+  document.getElementById('runHrAvg').value=r.hrAvg??'';
+  document.getElementById('runHrMax').value=r.hrMax??'';
+  document.querySelectorAll('#runTags .rtag').forEach(b=>b.classList.toggle('on', b.dataset.tag===r.tag));
+  const pace=fmtPace(state);
+  document.getElementById('paceMeta').textContent = pace? pace+' /km' : '—';
+  const box=document.getElementById('paceBox');
+  if(pace){
+    const km=+r.dist, secs=runSecs(state); const kmh=km/(secs/3600);
+    box.className='pacebox show';
+    box.innerHTML=`<div class="pcell"><div class="pv">${pace}<small> /km</small></div><div class="pk">평균 페이스</div></div>`+
+      `<div class="pcell"><div class="pv">${kmh.toFixed(1)}<small> km/h</small></div><div class="pk">속도</div></div>`+
+      (r.hrAvg?`<div class="pcell"><div class="pv">${r.hrAvg}<small> bpm</small></div><div class="pk">평균 심박</div></div>`:'');
+  } else { box.className='pacebox'; box.innerHTML=''; }
+}
+
+/* ---------- render: body / condition / notes ---------- */
+function renderBody(){
+  document.getElementById('weight').value=state.body.weight??'';
+  document.getElementById('waist').value=state.body.waist??'';
+  document.getElementById('water').value=state.body.water??'';
+  document.getElementById('steps').value=state.body.steps??'';
+  document.getElementById('alcohol').value=state.body.alcohol??'';
+  document.getElementById('protein').value=state.body.protein??'';
+  const p=state.body.protein||0;
+  document.getElementById('proFill').style.width=Math.min(100,p/PROTEIN_TARGET*100)+'%';
+  document.getElementById('proNow').textContent=p+' g';
+}
+function buildScale(id,max,cls,field){
+  const wrap=document.getElementById(id); wrap.innerHTML='';
+  for(let i=(field==='pain'?0:1);i<=max;i++){
+    const b=document.createElement('button'); b.className='sv'; b.textContent=i;
+    b.onclick=()=>{ state.cond[field]=(state.cond[field]===i?null:i); renderCond(); scheduleSave(); };
+    wrap.appendChild(b);
+  }
+}
+function renderCond(){
+  document.querySelectorAll('#painScale .sv').forEach(b=>b.classList.toggle('on', +b.textContent===state.cond.pain));
+  document.querySelectorAll('#enScale .sv').forEach(b=>b.classList.toggle('on', +b.textContent===state.cond.energy));
+  document.querySelectorAll('#stScale .sv').forEach(b=>b.classList.toggle('on', +b.textContent===state.cond.stress));
+  document.getElementById('painLbl').textContent = state.cond.pain!=null? state.cond.pain : '—';
+  document.getElementById('enLbl').textContent = state.cond.energy!=null? state.cond.energy : '—';
+  document.getElementById('stLbl').textContent = state.cond.stress!=null? state.cond.stress : '—';
+  document.getElementById('rhr').value = state.cond.rhr??'';
+}
+function renderNotes(){ document.getElementById('notes').value=state.notes||''; }
+
+/* ---------- master render ---------- */
+function renderAll(){
+  renderHeader(); renderStrip(); renderSummary();
+  renderSleep(); renderCaf(); renderTypeAndPreset(); renderExercises(); renderRun(); renderBody(); renderCond(); renderNotes();
+}
+
+/* ---------- switch date ---------- */
+async function switchDate(ds){
+  if(ds>todayStr()) return;
+  await doSave(); // persist current before leaving
+  cur=ds; state=await loadDay(ds); renderAll();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ================= TRENDS ================= */
+function sortedDays(){ return Object.values(cache).filter(isLogged).sort((a,b)=>a.date<b.date?-1:1); }
+function sparkline(svgId, series, color){
+  const svg=document.getElementById(svgId); svg.innerHTML='';
+  const pts=series.filter(p=>p.v!=null);
+  if(pts.length<2){ svg.innerHTML=`<text x="150" y="36" fill="var(--faint)" font-size="11" text-anchor="middle" font-family="Inter">데이터가 2개 이상이면 그래프가 그려져요</text>`; return; }
+  const vals=pts.map(p=>p.v), mn=Math.min(...vals), mx=Math.max(...vals), rng=(mx-mn)||1;
+  const W=300,H=64,pad=8;
+  const X=i=>pad+ i*(W-2*pad)/(pts.length-1);
+  const Y=v=>H-pad-((v-mn)/rng)*(H-2*pad);
+  let d=''; pts.forEach((p,i)=>{ d+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)+' '; });
+  const area=d+`L ${X(pts.length-1).toFixed(1)} ${H} L ${X(0).toFixed(1)} ${H} Z`;
+  svg.innerHTML=`<path d="${area}" fill="${color}" opacity="0.10"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
+    pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${i===pts.length-1?3.2:2}" fill="${color}"/>`).join('');
+}
+function setChange(id, series, lowerBetter){
+  const pts=series.filter(p=>p.v!=null); const el=document.getElementById(id);
+  if(pts.length<2){ el.textContent=''; return; }
+  const diff=+(pts[pts.length-1].v - pts[0].v).toFixed(1);
+  const dir = diff<0?'down':diff>0?'up':'flat';
+  const good = lowerBetter? diff<0 : diff>0;
+  el.className='chg '+(diff===0?'flat':(good?'down':'up'));
+  el.textContent=(diff>0?'+':'')+diff;
+}
+function renderTrends(){
+  const days=sortedDays();
+  const wSeries=days.map(d=>({d:d.date,v:d.body.weight!=null?+d.body.weight:null}));
+  const waSeries=days.map(d=>({d:d.date,v:d.body.waist!=null?+d.body.waist:null}));
+  const lastW=[...wSeries].reverse().find(p=>p.v!=null);
+  const lastWa=[...waSeries].reverse().find(p=>p.v!=null);
+  document.getElementById('wNow').textContent=lastW?lastW.v:'—';
+  document.getElementById('waNow').textContent=lastWa?lastWa.v:'—';
+  sparkline('wSpark',wSeries,'#6FCF97'); setChange('wChg',wSeries,true);
+  sparkline('waSpark',waSeries,'#F2A93B'); setChange('waChg',waSeries,true);
+
+  // last 7 days averages
+  const base=parseD(todayStr()); const last7=[];
+  for(let i=0;i<7;i++){ const dt=new Date(base); dt.setDate(base.getDate()-i); const d=cache[fmt(dt)]; if(d) last7.push(d); }
+  const avg=(arr)=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
+  const sl=avg(last7.map(totalSleepMin).filter(x=>x!=null));
+  const cf=avg(last7.map(cafTotal).filter(x=>x>0));
+  const sess=last7.filter(d=>d.workout.type && d.workout.type!=='rest').length;
+  const pr=avg(last7.map(d=>d.body.protein).filter(x=>x!=null));
+  document.getElementById('wkSleep').textContent = sl!=null? (sl/60).toFixed(1)+'h':'—';
+  document.getElementById('wkCaf').textContent = cf!=null? Math.round(cf)+'mg':'—';
+  document.getElementById('wkSess').textContent = sess+'회';
+  document.getElementById('wkPro').textContent = pr!=null? Math.round(pr)+'g':'—';
+
+  // per-body-part volume (compare back-to-back, legs-to-legs, chest-to-chest)
+  const pv=document.getElementById('partVols'); pv.innerHTML='';
+  const partInfo=[['back','등','var(--teal)','var(--teal-soft)'],['chest','가슴','var(--amber)','var(--amber-soft)'],['legs','하체','var(--violet)','var(--violet-soft)']];
+  let anyPart=false;
+  partInfo.forEach(([type,label,col,soft])=>{
+    const sess=days.filter(d=>d.workout.type===type&&sessionVol(d)>0).slice(-8);
+    if(!sess.length) return; anyPart=true;
+    const mx=Math.max(...sess.map(sessionVol));
+    const last=sessionVol(sess[sess.length-1]);
+    const block=document.createElement('div'); block.className='partblock';
+    let bars='';
+    sess.forEach(d=>{ const v=sessionVol(d), dt=parseD(d.date);
+      bars+=`<div class="vb" style="height:${Math.max(5,v/mx*100)}%;background:${soft}"><span class="cap">${v>=1000?(v/1000).toFixed(1)+'k':v}</span><span class="dl">${dt.getMonth()+1}/${dt.getDate()}</span></div>`;
+    });
+    block.innerHTML=`<div class="partlab"><span style="color:${col}">${label}</span><span class="partnow" style="color:${col}">${last} kg</span></div><div class="volbars">${bars}</div>`;
+    pv.appendChild(block);
+  });
+  if(!anyPart) pv.innerHTML='<div class="empty">운동을 기록하면 부위별 볼륨이 쌓여요</div>';
+
+  // running stats
+  const runs=days.filter(d=>d.run&&(d.run.dist||runSecs(d)));
+  const km7=last7.reduce((a,d)=>a+(+(d.run&&d.run.dist)||0),0);
+  document.getElementById('runKm').textContent = km7? km7.toFixed(1) : '—';
+  const lastRun=[...runs].reverse()[0];
+  document.getElementById('runLastPace').textContent = (lastRun&&fmtPace(lastRun))? fmtPace(lastRun) : '—';
+  const hrs=last7.map(d=>d.run&&d.run.hrAvg).filter(x=>x);
+  document.getElementById('runAvgHr').textContent = hrs.length? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length)+' bpm' : '—';
+  const rr=document.getElementById('runRecent'); rr.innerHTML='';
+  const recentRuns=[...runs].reverse().slice(0,6);
+  if(recentRuns.length){
+    const rtag={easy:'존2',tempo:'템포',interval:'인터벌',long:'롱런'};
+    recentRuns.forEach(d=>{ const dt=parseD(d.date), r=d.run, pace=fmtPace(d);
+      const row=document.createElement('div'); row.className='rrow';
+      const meta=[ r.dist?`${(+r.dist).toFixed(1)}km`:'', pace?`${pace}/km`:'', r.hrAvg?`${r.hrAvg}bpm`:'' ].filter(Boolean).join(' · ');
+      row.innerHTML=`<span class="rd">${dt.getMonth()+1}/${dt.getDate()}</span><span class="tag back">${rtag[r.tag]||'런'}</span><span class="rmeta">${meta||'—'}</span>`;
+      row.onclick=()=>{ switchToday(); switchDate(d.date); };
+      rr.appendChild(row);
+    });
+  } else { rr.innerHTML='<div class="empty" style="padding:16px 10px">러닝을 기록하면 여기 쌓여요</div>'; }
+
+  // recent list
+  const rc=document.getElementById('recent'); rc.innerHTML='';
+  const recent=[...days].reverse().slice(0,14);
+  if(!recent.length){ rc.innerHTML='<div class="empty">아직 기록이 없어요.<br>오늘부터 하나씩 채워보세요.</div>'; return; }
+  const tname={back:'등',chest:'가슴',legs:'하체',rest:'휴식'};
+  recent.forEach(d=>{ const dt=parseD(d.date); const sm=sleepMinutes(d); const v=sessionVol(d);
+    const row=document.createElement('div'); row.className='rrow';
+    const tag = d.workout.type? `<span class="tag ${d.workout.type}">${tname[d.workout.type]}</span>` : '<span class="tag rest">—</span>';
+    const meta=[ d.body.weight?`${d.body.weight}kg`:'', sm!=null?`${fmtH(sm)}h`:'', v?`vol ${v}`:'' ].filter(Boolean).join(' · ');
+    row.innerHTML=`<span class="rd">${dt.getMonth()+1}/${dt.getDate()} ${DOW[dt.getDay()]}</span>${tag}<span class="rmeta">${meta||'—'}</span>`;
+    row.onclick=()=>{ switchToday(); switchDate(d.date); };
+    rc.appendChild(row);
+  });
+}
+
+/* ---------- view switching ---------- */
+function showView(which){
+  ['Today','Trend','AI'].forEach(v=>{
+    document.getElementById('view'+v).classList.toggle('hide', v!==which);
+    document.getElementById('tab'+v).classList.toggle('active', v===which);
+  });
+}
+function switchToday(){ showView('Today'); }
+function switchTrend(){ showView('Trend'); renderTrends(); }
+function switchAI(){ showView('AI'); renderChat(); setTimeout(()=>{ const i=document.getElementById('chatInput'); if(i&&gem.key) i.focus(); },50); }
+
+/* ================= EVENTS ================= */
+document.getElementById('prev').onclick=()=>{ const d=parseD(cur); d.setDate(d.getDate()-1); switchDate(fmt(d)); };
+document.getElementById('next').onclick=()=>{ const d=parseD(cur); d.setDate(d.getDate()+1); if(fmt(d)<=todayStr()) switchDate(fmt(d)); };
+document.getElementById('tabToday').onclick=switchToday;
+document.getElementById('tabTrend').onclick=switchTrend;
+document.getElementById('tabAI').onclick=switchAI;
+
+document.getElementById('bedtime').oninput=e=>{ state.bedtime=e.target.value; renderSleep(); renderSummary(); scheduleSave(); };
+document.getElementById('waketime').oninput=e=>{ state.waketime=e.target.value; renderSleep(); renderSummary(); scheduleSave(); };
+document.getElementById('wakeMid').oninput=e=>{ state.wakeMid=e.target.value===''?null:+e.target.value; renderSleep(); renderSummary(); scheduleSave(); };
+document.getElementById('nap').oninput=e=>{ state.nap=e.target.value===''?null:+e.target.value; renderSleep(); renderSummary(); renderStrip(); scheduleSave(); };
+
+document.querySelectorAll('.qbtn').forEach(b=>b.onclick=()=>addCaf(+b.dataset.mg));
+document.getElementById('cafAdd').onclick=()=>{ const i=document.getElementById('cafCustom'); addCaf(+i.value); i.value=''; };
+document.getElementById('cafItems').onclick=e=>{ const x=e.target.closest('.x'); if(!x)return; state.caffeine.items.splice(+x.dataset.i,1); renderCaf(); renderSummary(); scheduleSave(); };
+document.getElementById('cafClear').onclick=()=>{ state.caffeine.items=[]; renderCaf(); renderSummary(); scheduleSave(); };
+
+document.querySelectorAll('.tbtn').forEach(b=>b.onclick=()=>{ state.workout.type=(state.workout.type===b.dataset.t?null:b.dataset.t); renderTypeAndPreset(); renderStrip(); scheduleSave(); });
+
+const exList=document.getElementById('exerciseList');
+exList.addEventListener('input',e=>{ const t=e.target; const ei=+t.dataset.ei, f=t.dataset.f; if(ei==null||isNaN(ei))return;
+  if(f==='name'){ state.workout.exercises[ei].name=t.value; }
+  else if(f==='w'||f==='r'){ const si=+t.dataset.si; state.workout.exercises[ei].sets[si][f]=t.value;
+    // live-update this exercise's volume + session total without re-render (keep focus)
+    t.closest('.ex').querySelector('.exvol').textContent=exVol(state.workout.exercises[ei], getBW(cur))+' kg';
+    document.getElementById('sessVolN').textContent=sessionVol(state)||0; renderSummary();
+  }
+  scheduleSave();
+});
+exList.addEventListener('click',e=>{ const btn=e.target.closest('[data-act]'); if(!btn)return; const ei=+btn.dataset.ei;
+  const act=btn.dataset.act;
+  if(act==='addset'){ state.workout.exercises[ei].sets.push({w:'',r:''}); renderExercises(); }
+  else if(act==='rmset'){ state.workout.exercises[ei].sets.splice(+btn.dataset.si,1); renderExercises(); renderSummary(); }
+  else if(act==='rmex'){ state.workout.exercises.splice(ei,1); renderExercises(); renderSummary(); renderStrip(); }
+  scheduleSave();
+});
+
+document.getElementById('weight').oninput=e=>{ state.body.weight=e.target.value===''?null:+e.target.value; renderExercises(); renderSummary(); renderStrip(); scheduleSave(); };
+document.getElementById('waist').oninput=e=>{ state.body.waist=e.target.value===''?null:+e.target.value; scheduleSave(); };
+document.getElementById('protein').oninput=e=>{ state.body.protein=e.target.value===''?null:+e.target.value; renderBody(); renderSummary(); scheduleSave(); };
+document.getElementById('water').oninput=e=>{ state.body.water=e.target.value===''?null:+e.target.value; scheduleSave(); };
+document.getElementById('steps').oninput=e=>{ state.body.steps=e.target.value===''?null:+e.target.value; scheduleSave(); };
+document.getElementById('alcohol').oninput=e=>{ state.body.alcohol=e.target.value===''?null:+e.target.value; scheduleSave(); };
+document.getElementById('rhr').oninput=e=>{ state.cond.rhr=e.target.value===''?null:+e.target.value; scheduleSave(); };
+document.getElementById('notes').oninput=e=>{ state.notes=e.target.value; scheduleSave(); };
+
+/* ---------- running inputs ---------- */
+function ensureRun(){ if(!state.run) state.run={dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null}; return state.run; }
+const runNum=(id,field)=>{ document.getElementById(id).oninput=e=>{ ensureRun()[field]= e.target.value===''?null:+e.target.value; updateRunMeta(); renderSummary(); renderStrip(); scheduleSave(); }; };
+runNum('runDist','dist'); runNum('runMin','min'); runNum('runSec','sec'); runNum('runHrAvg','hrAvg'); runNum('runHrMax','hrMax');
+function updateRunMeta(){
+  const pace=fmtPace(state); document.getElementById('paceMeta').textContent = pace? pace+' /km' : '—';
+  const r=state.run||{}, box=document.getElementById('paceBox');
+  if(pace){ const km=+r.dist, secs=runSecs(state), kmh=km/(secs/3600);
+    box.className='pacebox show';
+    box.innerHTML=`<div class="pcell"><div class="pv">${pace}<small> /km</small></div><div class="pk">평균 페이스</div></div>`+
+      `<div class="pcell"><div class="pv">${kmh.toFixed(1)}<small> km/h</small></div><div class="pk">속도</div></div>`+
+      (r.hrAvg?`<div class="pcell"><div class="pv">${r.hrAvg}<small> bpm</small></div><div class="pk">평균 심박</div></div>`:'');
+  } else { box.className='pacebox'; box.innerHTML=''; }
+}
+document.getElementById('runTags').onclick=e=>{ const b=e.target.closest('.rtag'); if(!b)return; const r=ensureRun(); r.tag=(r.tag===b.dataset.tag?null:b.dataset.tag);
+  document.querySelectorAll('#runTags .rtag').forEach(x=>x.classList.toggle('on', x.dataset.tag===r.tag)); scheduleSave(); };
+
+/* ---------- sync / settings UI ---------- */
+const overlay=document.getElementById('setupOverlay');
+function openSetup(){
+  document.getElementById('codeInput').value = LSget(CODE_KEY)||'';
+  document.getElementById('cfgInput').value = LSget(CFG_KEY)||'';
+  document.getElementById('gemKey').value = LSget(GEM_KEY)||'';
+  document.getElementById('connectMsg').textContent='';
+  document.getElementById('backupMsg').textContent='';
+  document.getElementById('gemMsg').textContent='';
+  sync.render();
+  overlay.classList.remove('hide');
+}
+function closeSetup(){ overlay.classList.add('hide'); }
+document.getElementById('gear').onclick=openSetup;
+document.getElementById('setupClose').onclick=closeSetup;
+overlay.onclick=e=>{ if(e.target===overlay) closeSetup(); };
+document.getElementById('syncBar').onclick=()=>{ if(sync.pendingRefresh) sync.applyRefresh(); else openSetup(); };
+
+document.getElementById('codeGen').onclick=()=>{ document.getElementById('codeInput').value=genCode(); };
+document.getElementById('codeCopy').onclick=async()=>{ const v=document.getElementById('codeInput').value; try{ await navigator.clipboard.writeText(v); flash('connectMsg','코드를 복사했어요','ok'); }catch(e){ flash('connectMsg','복사 실패 — 길게 눌러 복사하세요','bad'); } };
+document.getElementById('rulesCopy').onclick=async()=>{ try{ await navigator.clipboard.writeText(document.getElementById('rulesText').textContent); flash('connectMsg','규칙을 복사했어요','ok'); }catch(e){} };
+
+function flash(id,msg,cls){ const el=document.getElementById(id); el.textContent=msg; el.className='smsg '+(cls||''); }
+
+document.getElementById('connectBtn').onclick=async()=>{
+  const code=document.getElementById('codeInput').value.trim();
+  const cfgText=document.getElementById('cfgInput').value.trim();
+  if(!code){ flash('connectMsg','동기화 코드를 먼저 만들거나 입력하세요','bad'); return; }
+  const cfg=sync.parseConfig(cfgText);
+  if(!cfg||!cfg.apiKey||!cfg.projectId){ flash('connectMsg','연결 키 형식이 올바르지 않아요. firebaseConfig 전체를 붙여넣었는지 확인하세요','bad'); return; }
+  flash('connectMsg','연결 중…','');
+  LSset(CFG_KEY,cfgText); LSset(CODE_KEY,code);
+  const ok=await sync.connect(cfg,code);
+  if(ok) flash('connectMsg','연결됐어요! 이제 같은 코드를 다른 기기에도 넣으면 자동 동기화돼요.','ok');
+  else flash('connectMsg','연결 실패: '+(sync.error||'')+' — Firestore/익명 로그인 설정을 확인하세요','bad');
+};
+
+/* ---------- backup ---------- */
+document.getElementById('exportBtn').onclick=()=>{
+  const days={}; Object.values(cache).forEach(d=>{ if(d&&d.date&&isLogged(d)) days[d.date]=d; });
+  const blob=new Blob([JSON.stringify({app:'REBUILD',version:1,exportedAt:new Date().toISOString(),days},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='rebuild-backup-'+todayStr()+'.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  flash('backupMsg', Object.keys(days).length+'일치 기록을 내보냈어요','ok');
+};
+document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange=e=>{
+  const file=e.target.files[0]; if(!file) return; const r=new FileReader();
+  r.onload=async()=>{ try{
+      const data=JSON.parse(r.result); const days=data.days||data; let n=0;
+      for(const date in days){ const d=days[date]; if(d&&d.date){ cache[date]=d; await store.set(KEY(date),JSON.stringify(d)); sync.push(date,d); n++; } }
+      state=await loadDay(cur); renderAll();
+      flash('backupMsg', n+'일치 기록을 불러왔어요','ok');
+    }catch(err){ flash('backupMsg','파일을 읽지 못했어요','bad'); }
+    e.target.value='';
+  };
+  r.readAsText(file);
+};
+
+/* ================= AI COACH (Gemini) ================= */
+const GEM_KEY='cfg:geminiKey';
+const gem={ key:LSget(GEM_KEY)||'', msgs:[], busy:false };
+const GEM_MODEL='gemini-2.0-flash';
+
+function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function fmtMsg(t){ return escapeHtml(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'); }
+
+function coachContext(){
+  const days=Object.values(cache).filter(isLogged).sort((a,b)=>a.date<b.date?-1:1);
+  const recent=days.slice(-14);
+  const tname={back:'등',chest:'가슴',legs:'하체',rest:'휴식'};
+  const lines=recent.map(d=>{
+    const p=[]; const ts=totalSleepMin(d); if(ts!=null)p.push('수면'+fmtH(ts)+'h');
+    if(d.workout.type)p.push(tname[d.workout.type]+(sessionVol(d)?(' '+sessionVol(d)+'kg'):''));
+    if(d.run&&(d.run.dist||runSecs(d)))p.push('러닝'+(d.run.dist?d.run.dist+'km':'')+(fmtPace(d)?(' '+fmtPace(d)+'/km'):'')+(d.run.hrAvg?(' '+d.run.hrAvg+'bpm'):''));
+    if(d.body.protein)p.push('단백'+d.body.protein+'g');
+    if(d.body.weight)p.push(d.body.weight+'kg');
+    if(d.body.waist)p.push('허리'+d.body.waist);
+    if(d.body.steps)p.push(d.body.steps+'보');
+    if(cafTotal(d))p.push('카페인'+cafTotal(d)+'mg');
+    if(d.body.alcohol)p.push('음주'+d.body.alcohol+'잔');
+    if(d.cond.rhr)p.push('RHR'+d.cond.rhr);
+    if(d.cond.stress!=null)p.push('스트레스'+d.cond.stress);
+    if(d.cond.energy!=null)p.push('에너지'+d.cond.energy);
+    if(d.cond.pain!=null)p.push('어깨통증'+d.cond.pain);
+    return d.date+': '+(p.join(', ')||'기록만');
+  });
+  return lines.length? lines.join('\n') : '아직 기록이 거의 없음.';
+}
+function coachSystem(){
+  return `당신은 사용자의 개인 피트니스·건강 코치입니다. 한국어로, 근거 기반(과학적)으로, 간결하고 실용적으로 답하세요. 의학용어엔 () 안에 영문 풀네임을 함께 적어주세요.
+
+사용자 프로필: 29세 남성, 177cm, 약 77kg. 피부과 전공의(인턴). 6개월 쉬고 복귀한 중상급 리프터. 이미 체지방 낮음(인바디 기준). 목표는 체지방 감량 + 근육 유지, 건강하고 활력 있는 삶. 어깨에 통증 있어 프레싱은 밀프(OHP) 중심, 인클라인이 가장 아픔. 등/가슴/하체 분할, 트랩바, 존2 러닝을 함. 단백질 하루 150g 목표.
+
+아래는 사용자의 최근 기록입니다(참고해서 구체적 숫자로 답하세요). 데이터가 부족하면 일반 원칙으로 답하되 추측은 분명히 밝히세요. 의학적 진단이나 약 처방은 하지 말고, 필요하면 전문가 상담을 권하세요.
+
+[최근 기록]
+${coachContext()}`;
+}
+
+function renderChat(){
+  const log=document.getElementById('chatLog');
+  if(!gem.key){
+    log.innerHTML=`<div class="chat-setup">💬 <b>AI 코치</b>를 쓰려면 무료 Gemini API 키가 필요해요.<br>구글 계정으로 <b>aistudio.google.com/apikey</b>에서 키를 만들고, ⚙ 설정에 붙여넣으세요.<br><button class="cbtn" id="chatGoSetup">⚙ 키 설정하기</button></div>`;
+    document.getElementById('chatGoSetup').onclick=openSetup;
+    return;
+  }
+  let html='';
+  if(!gem.msgs.length){
+    html+=`<div class="chat-setup" style="padding:24px 26px 6px">내 기록을 바탕으로 물어보세요. 예를 들면:</div>`;
+    html+=`<div class="chips" id="chatChips">`+
+      ['이번 주 운동 어땠어?','수면이랑 컨디션 관계 분석해줘','어깨 안 아프게 가슴 루틴 짜줘','체지방 빼려면 뭘 바꿔야 해?'].map(c=>`<button class="chip">${c}</button>`).join('')+`</div>`;
+  }
+  gem.msgs.forEach(m=>{ html+=`<div class="msg ${m.role}">${m.role==='ai'?fmtMsg(m.text):escapeHtml(m.text)}</div>`; });
+  if(gem.busy) html+=`<div class="msg ai typing">…생각 중</div>`;
+  log.innerHTML=html;
+  if(!gem.msgs.length){ document.querySelectorAll('#chatChips .chip').forEach(b=>b.onclick=()=>sendMessage(b.textContent)); }
+  log.scrollTop=log.scrollHeight;
+  setTimeout(()=>{ window.scrollTo({top:document.body.scrollHeight}); },30);
+}
+
+async function sendMessage(text){
+  text=(text||'').trim(); if(!text||gem.busy||!gem.key) return;
+  gem.msgs.push({role:'user',text}); gem.busy=true; renderChat();
+  const input=document.getElementById('chatInput'); if(input){ input.value=''; input.style.height='auto'; }
+  try{
+    const body={ system_instruction:{parts:[{text:coachSystem()}]},
+      contents: gem.msgs.map(m=>({role: m.role==='ai'?'model':'user', parts:[{text:m.text}]})),
+      generationConfig:{ maxOutputTokens:1200, temperature:0.7 } };
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEM_MODEL}:generateContent?key=${encodeURIComponent(gem.key)}`,
+      { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const data=await res.json();
+    if(!res.ok){ throw new Error((data.error&&data.error.message)||('HTTP '+res.status)); }
+    const cand=data.candidates&&data.candidates[0];
+    const out=cand&&cand.content&&cand.content.parts? cand.content.parts.map(p=>p.text||'').join('').trim() : '';
+    gem.busy=false;
+    if(out){ gem.msgs.push({role:'ai',text:out}); }
+    else { gem.msgs.push({role:'err',text:'응답이 비어 있어요. 다시 시도해보세요.'}); }
+    renderChat();
+  }catch(e){
+    gem.busy=false; gem.msgs.push({role:'err',text:'오류: '+e.message+(/API key|invalid|API_KEY/i.test(e.message)?' (키를 확인하세요)':'')}); renderChat();
+  }
+}
+
+document.getElementById('chatSend').onclick=()=>{ const i=document.getElementById('chatInput'); sendMessage(i.value); };
+document.getElementById('chatInput').addEventListener('input',e=>{ e.target.style.height='auto'; e.target.style.height=Math.min(120,e.target.scrollHeight)+'px'; });
+document.getElementById('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(e.target.value); } });
+
+/* gemini key in settings */
+document.getElementById('gemSave').onclick=()=>{
+  const v=document.getElementById('gemKey').value.trim();
+  gem.key=v; LSset(GEM_KEY,v);
+  flash('gemMsg', v?'저장됐어요! AI 코치 탭에서 바로 쓸 수 있어요.':'키를 비웠어요.','ok');
+  if(!document.getElementById('viewAI').classList.contains('hide')) renderChat();
+};
+
+/* ---------- init ---------- */
+(async function init(){
+  // make it installable as a standalone app on Android (iOS uses the meta tags above)
+  try{
+    const icon="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230F141A'/><path d='M28 72 V52 M50 72 V40 M72 72 V28' stroke='%23F2A93B' stroke-width='9' stroke-linecap='round' fill='none'/></svg>";
+    const mani={name:'REBUILD',short_name:'REBUILD',display:'standalone',orientation:'portrait',background_color:'#0F141A',theme_color:'#0F141A',start_url:'.',icons:[{src:icon,sizes:'any',type:'image/svg+xml',purpose:'any'}]};
+    const link=document.createElement('link'); link.rel='manifest';
+    link.href=URL.createObjectURL(new Blob([JSON.stringify(mani)],{type:'application/manifest+json'}));
+    document.head.appendChild(link);
+  }catch(e){}
+  buildScale('painScale',10,'pain','pain');
+  buildScale('enScale',5,'energy','energy');
+  buildScale('stScale',5,'stress','stress');
+  await loadAll();
+  state=await loadDay(cur);
+  renderAll();
+  sync.init();
+})();
+</script>
+</body>
+</html>
