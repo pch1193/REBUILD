@@ -164,6 +164,29 @@
   .sessvol .val{font-family:var(--font-d);font-weight:700;font-size:24px;color:var(--violet)}
   .sessvol .val small{font-size:13px;color:var(--muted);font-weight:500}
 
+  /* timer */
+  .swwrap{text-align:center}
+  .swtime{font-family:var(--font-d);font-weight:700;font-size:46px;letter-spacing:.01em;color:var(--amber);line-height:1;margin:2px 0 13px}
+  .swbtns{display:flex;gap:8px;justify-content:center}
+  .swbtn{flex:1;background:var(--inset);border:1px solid var(--line);border-radius:11px;padding:12px 4px;font-size:13.5px;font-weight:600;color:var(--text)}
+  .swbtn:active{transform:scale(.96)}
+  .swbtn.primary{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+  .swbtn.primary.on{background:rgba(232,128,107,.14);color:var(--red);border-color:var(--red)}
+  .laps{margin-top:11px;display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto}
+  .lap{display:flex;justify-content:space-between;font-family:var(--font-d);font-size:12.5px;color:var(--text);background:var(--inset);border-radius:8px;padding:7px 11px}
+  .lap .li{color:var(--faint)}
+  .resthead{font-size:12px;color:var(--muted);margin:18px 0 9px;padding-top:15px;border-top:1px solid var(--line)}
+  .restpresets{display:flex;gap:7px}
+  .rbtn{flex:1;background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:12px 4px;font-size:13px;font-weight:600;color:var(--teal)}
+  .rbtn:active{transform:scale(.95)}
+  .rbtn.on{background:var(--teal-soft);border-color:var(--teal)}
+  .restbar{display:none;align-items:center;gap:12px;margin-top:12px;background:var(--inset);border:1px solid var(--line);border-radius:12px;padding:11px 14px}
+  .restbar.show{display:flex}
+  .restbar.done{border-color:var(--green);background:var(--green-soft)}
+  .resttime{font-family:var(--font-d);font-weight:700;font-size:30px;color:var(--teal);flex:1;text-align:left}
+  .restbar.done .resttime{color:var(--green)}
+  .restcancel{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:600;color:var(--muted)}
+
   /* protein bar */
   .pbar{height:8px;background:var(--inset);border-radius:6px;overflow:hidden;margin-top:9px}
   .pbar .pf{height:100%;background:var(--green);border-radius:6px;transition:width .3s}
@@ -366,6 +389,31 @@
       <div class="sessvol">
         <span class="lab">세션 총 볼륨</span>
         <span class="val"><span id="sessVolN">0</span> <small>kg</small></span>
+      </div>
+    </div>
+
+    <!-- timer / stopwatch -->
+    <div class="card">
+      <div class="ch"><span class="ic train"></span><h2>타이머</h2></div>
+      <div class="swwrap">
+        <div class="swtime num" id="swTime">00:00.0</div>
+        <div class="swbtns">
+          <button class="swbtn primary" id="swToggle">시작</button>
+          <button class="swbtn" id="swLap">랩</button>
+          <button class="swbtn" id="swReset">초기화</button>
+        </div>
+        <div class="laps" id="swLaps"></div>
+      </div>
+      <div class="resthead">세트 사이 휴식 타이머</div>
+      <div class="restpresets">
+        <button class="rbtn" data-sec="60">60초</button>
+        <button class="rbtn" data-sec="90">90초</button>
+        <button class="rbtn" data-sec="120">2분</button>
+        <button class="rbtn" data-sec="180">3분</button>
+      </div>
+      <div class="restbar" id="restBar">
+        <div class="resttime num" id="restTime">0:00</div>
+        <button class="restcancel" id="restCancel">정지</button>
       </div>
     </div>
 
@@ -1222,6 +1270,60 @@ document.getElementById('gemSave').onclick=()=>{
   state=await loadDay(cur);
   renderAll();
   sync.init();
+})();
+</script>
+<script>
+/* ---------- workout timer (stopwatch + rest) — self-contained, no storage/sync ---------- */
+(function(){
+  const swTime=document.getElementById('swTime');
+  if(!swTime) return;
+  const swToggle=document.getElementById('swToggle'),
+        swLap=document.getElementById('swLap'),
+        swReset=document.getElementById('swReset'),
+        swLaps=document.getElementById('swLaps');
+  let running=false, startAt=0, elapsed=0, tick=null, lapN=0, lastLap=0;
+  const fmt=ms=>{const t=Math.max(0,ms),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000),d=Math.floor((t%1000)/100);
+    return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+d;};
+  const paint=()=>{swTime.textContent=fmt(elapsed+(running?Date.now()-startAt:0));};
+  swToggle.onclick=()=>{
+    if(running){running=false;elapsed+=Date.now()-startAt;clearInterval(tick);tick=null;
+      swToggle.textContent='계속';swToggle.classList.remove('on');paint();}
+    else{running=true;startAt=Date.now();swToggle.textContent='일시정지';swToggle.classList.add('on');
+      tick=setInterval(paint,100);}
+  };
+  swReset.onclick=()=>{running=false;clearInterval(tick);tick=null;elapsed=0;lapN=0;lastLap=0;
+    swToggle.textContent='시작';swToggle.classList.remove('on');swLaps.innerHTML='';paint();};
+  swLap.onclick=()=>{
+    const total=elapsed+(running?Date.now()-startAt:0); if(total<=0)return;
+    lapN++; const split=total-lastLap; lastLap=total;
+    const row=document.createElement('div'); row.className='lap';
+    row.innerHTML='<span class="li">랩 '+lapN+'</span><span>'+fmt(split)+' <span style="color:var(--faint)">/ '+fmt(total)+'</span></span>';
+    swLaps.prepend(row);
+  };
+
+  // rest timer
+  const restBar=document.getElementById('restBar'),
+        restTime=document.getElementById('restTime'),
+        restCancel=document.getElementById('restCancel'),
+        rbtns=document.querySelectorAll('.rbtn');
+  let restEnd=0, restTick=null, audio=null;
+  const unlock=()=>{try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();}catch(e){}};
+  const beep=()=>{try{unlock();[0,0.18,0.36].forEach(off=>{
+      const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=880;
+      o.connect(g);g.connect(audio.destination);const t=audio.currentTime+off;
+      g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.4,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);o.start(t);o.stop(t+0.17);});}catch(e){}};
+  const rfmt=ms=>{const t=Math.max(0,Math.ceil(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
+  const restPaint=()=>{const left=restEnd-Date.now();restTime.textContent=rfmt(left);
+    if(left<=0){clearInterval(restTick);restTick=null;restBar.classList.add('done');
+      restTime.textContent='완료!';rbtns.forEach(b=>b.classList.remove('on'));beep();}};
+  rbtns.forEach(b=>{b.onclick=()=>{unlock();clearInterval(restTick);
+    restEnd=Date.now()+parseInt(b.dataset.sec,10)*1000;
+    restBar.classList.add('show');restBar.classList.remove('done');
+    rbtns.forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    restPaint();restTick=setInterval(restPaint,200);};});
+  restCancel.onclick=()=>{clearInterval(restTick);restTick=null;
+    restBar.classList.remove('show','done');rbtns.forEach(b=>b.classList.remove('on'));};
 })();
 </script>
 </body>
