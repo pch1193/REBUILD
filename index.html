@@ -89,6 +89,15 @@
   .ic.train{background:var(--violet)} .ic.body{background:var(--green)}
   .ic.cond{background:var(--red)} .ic.note{background:var(--muted)}
   .ic.run{background:var(--teal)}
+  /* collapsible + reorder */
+  #viewToday .card[data-card] > .ch{cursor:pointer;-webkit-user-select:none;user-select:none}
+  .cardctl{margin-left:auto;display:flex;align-items:center;gap:1px;flex-shrink:0}
+  .cmv{width:27px;height:27px;border-radius:7px;color:var(--faint);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;background:transparent}
+  .cmv:active{background:var(--inset);color:var(--text)}
+  .cvi{width:26px;height:27px;display:flex;align-items:center;justify-content:center;color:var(--faint);transition:transform .22s;margin-left:1px}
+  .card[data-card].collapsed .cvi{transform:rotate(-90deg)}
+  .card[data-card].collapsed > :not(.ch){display:none}
+  .card[data-card].collapsed > .ch{margin-bottom:0}
   .runtags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px}
   .rtag{background:var(--inset);border:1px solid var(--line);border-radius:20px;padding:8px 13px;font-size:12.5px;color:var(--muted)}
   .rtag:active{transform:scale(.95)}
@@ -347,7 +356,7 @@
 
   <main>
     <!-- sleep -->
-    <div class="card">
+    <div class="card" data-card="sleep">
       <div class="ch"><span class="ic sleep"></span><h2>수면</h2><span class="meta bigval teal" id="sleepDur">— h</span></div>
       <div class="field"><label>입면 시각</label><input type="time" class="tinput time" id="bedtime"></div>
       <div class="field"><label>기상 시각</label><input type="time" class="tinput time" id="waketime"></div>
@@ -357,7 +366,7 @@
     </div>
 
     <!-- caffeine -->
-    <div class="card">
+    <div class="card" data-card="caf">
       <div class="ch"><span class="ic caf"></span><h2>카페인</h2></div>
       <div class="caf-total"><span class="n" id="cafN">0</span><span class="u">mg</span></div>
       <div class="quick">
@@ -376,7 +385,7 @@
     </div>
 
     <!-- training -->
-    <div class="card">
+    <div class="card" data-card="train">
       <div class="ch"><span class="ic train"></span><h2>운동</h2></div>
       <div class="typesel">
         <button class="tbtn" data-t="back">등</button>
@@ -393,7 +402,7 @@
     </div>
 
     <!-- timer / stopwatch -->
-    <div class="card">
+    <div class="card" data-card="timer">
       <div class="ch"><span class="ic train"></span><h2>타이머</h2></div>
       <div class="swwrap">
         <div class="swtime num" id="swTime">00:00.0</div>
@@ -418,7 +427,7 @@
     </div>
 
     <!-- running -->
-    <div class="card">
+    <div class="card" data-card="run">
       <div class="ch"><span class="ic run"></span><h2>러닝 / 유산소</h2><span class="meta num" id="paceMeta">—</span></div>
       <div class="runtags" id="runTags">
         <button class="rtag" data-tag="easy">이지 · 존2</button>
@@ -434,7 +443,7 @@
     </div>
 
     <!-- body -->
-    <div class="card">
+    <div class="card" data-card="body">
       <div class="ch"><span class="ic body"></span><h2>신체</h2></div>
       <div class="field"><label>체중</label><span><input type="number" inputmode="decimal" class="tinput" id="weight" placeholder="—"> <span class="unit">kg</span></span></div>
       <div class="field"><label>허리둘레</label><span><input type="number" inputmode="decimal" class="tinput" id="waist" placeholder="—"> <span class="unit">cm</span></span></div>
@@ -451,7 +460,7 @@
     </div>
 
     <!-- condition -->
-    <div class="card">
+    <div class="card" data-card="cond">
       <div class="ch"><span class="ic cond"></span><h2>컨디션</h2></div>
       <div class="srow">
         <div class="top"><span>어깨 통증</span><b id="painLbl" style="color:var(--red)">—</b></div>
@@ -469,7 +478,7 @@
     </div>
 
     <!-- notes -->
-    <div class="card">
+    <div class="card" data-card="note">
       <div class="ch"><span class="ic note"></span><h2>메모</h2></div>
       <textarea class="notes" id="notes" placeholder="오늘 컨디션, 통증 위치, 식단 메모…"></textarea>
     </div>
@@ -1324,6 +1333,44 @@ document.getElementById('gemSave').onclick=()=>{
     restPaint();restTick=setInterval(restPaint,200);};});
   restCancel.onclick=()=>{clearInterval(restTick);restTick=null;
     restBar.classList.remove('show','done');rbtns.forEach(b=>b.classList.remove('on'));};
+})();
+</script>
+<script>
+/* ---------- collapsible cards + reorder (today view) — self-contained, local prefs ---------- */
+(function(){
+  const main=document.querySelector('#viewToday main');
+  if(!main) return;
+  const KEY_O='ui:cardOrder', KEY_C='ui:cardCollapsed';
+  let collapsed={}, order=[];
+  try{collapsed=JSON.parse(localStorage.getItem(KEY_C))||{};}catch(e){}
+  try{order=JSON.parse(localStorage.getItem(KEY_O))||[];}catch(e){}
+  const sel=':scope > .card[data-card]';
+  // apply saved order (then append any new cards not yet in saved order)
+  if(order.length){
+    order.forEach(k=>{const c=main.querySelector(':scope > .card[data-card="'+k+'"]'); if(c) main.appendChild(c);});
+    [...main.querySelectorAll(sel)].forEach(c=>{ if(!order.includes(c.dataset.card)) main.appendChild(c); });
+  }
+  const saveOrder=()=>{
+    const ks=[...main.querySelectorAll(sel)].map(c=>c.dataset.card);
+    try{localStorage.setItem(KEY_O, JSON.stringify(ks));}catch(e){}
+  };
+  const CV='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  [...main.querySelectorAll(sel)].forEach(card=>{
+    const ch=card.querySelector('.ch'); if(!ch||ch.querySelector('.cardctl')) return;
+    const ctl=document.createElement('span'); ctl.className='cardctl';
+    const up=document.createElement('button'); up.className='cmv'; up.textContent='▲'; up.setAttribute('aria-label','위로');
+    const dn=document.createElement('button'); dn.className='cmv'; dn.textContent='▼'; dn.setAttribute('aria-label','아래로');
+    const cv=document.createElement('span'); cv.className='cvi'; cv.innerHTML=CV;
+    ctl.append(up,dn,cv); ch.appendChild(ctl);
+    up.onclick=e=>{e.stopPropagation(); const p=card.previousElementSibling; if(p&&p.matches('.card[data-card]')){main.insertBefore(card,p); saveOrder();}};
+    dn.onclick=e=>{e.stopPropagation(); const n=card.nextElementSibling; if(n&&n.matches('.card[data-card]')){main.insertBefore(n,card); saveOrder();}};
+    if(collapsed[card.dataset.card]) card.classList.add('collapsed');
+    ch.addEventListener('click',()=>{
+      card.classList.toggle('collapsed');
+      collapsed[card.dataset.card]=card.classList.contains('collapsed');
+      try{localStorage.setItem(KEY_C, JSON.stringify(collapsed));}catch(e){}
+    });
+  });
 })();
 </script>
 </body>
