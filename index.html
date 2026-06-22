@@ -59,7 +59,7 @@
   .sday .bar{width:100%;height:34px;border-radius:7px;background:var(--inset);position:relative;overflow:hidden;border:1px solid transparent}
   .sday .bar .fill{position:absolute;left:0;right:0;bottom:0;background:var(--line)}
   .sday.logged .bar .fill{background:var(--muted)}
-  .sday .dot{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%}
+  .sday .dot{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;z-index:2;box-shadow:0 0 0 1.5px var(--inset)}
   .sday .lbl{font-size:10px;color:var(--faint);font-family:var(--font-d)}
   .sday.sel .bar{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft)}
   .sday.sel .lbl{color:var(--amber)}
@@ -172,6 +172,14 @@
   .sessvol .lab{font-size:12px;color:var(--muted)}
   .sessvol .val{font-family:var(--font-d);font-weight:700;font-size:24px;color:var(--violet)}
   .sessvol .val small{font-size:13px;color:var(--muted);font-weight:500}
+  .durrow{display:flex;align-items:center;justify-content:space-between;margin-top:11px}
+  .durrow .lab{font-size:12px;color:var(--muted)}
+  .durval{display:flex;align-items:baseline;gap:5px}
+  .durval input{width:72px;text-align:right;background:var(--inset);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--font-d);font-weight:700;font-size:18px;color:var(--amber);min-width:0}
+  .durval small{font-size:12px;color:var(--muted)}
+  .swsave{width:100%;margin-top:11px;background:var(--inset);border:1px solid var(--line);border-radius:11px;padding:11px;font-size:13px;font-weight:600;color:var(--violet)}
+  .swsave:active{transform:scale(.98)}
+  .swsave.done{color:var(--green);border-color:var(--green)}
 
   /* timer */
   .swwrap{text-align:center}
@@ -400,6 +408,10 @@
         <span class="lab">세션 총 볼륨</span>
         <span class="val"><span id="sessVolN">0</span> <small>kg</small></span>
       </div>
+      <div class="durrow">
+        <span class="lab">운동 시간</span>
+        <span class="durval"><input type="number" inputmode="numeric" id="workDur" placeholder="—"> <small>분</small></span>
+      </div>
     </div>
 
     <!-- timer / stopwatch -->
@@ -413,6 +425,7 @@
           <button class="swbtn" id="swReset">초기화</button>
         </div>
         <div class="laps" id="swLaps"></div>
+        <button class="swsave" id="swSave">⏱ 운동 시간으로 저장</button>
       </div>
       <div class="resthead">세트 사이 휴식 타이머</div>
       <div class="restpresets">
@@ -628,8 +641,8 @@ const DOW=['일','월','화','수','목','금','토'];
 function parseD(s){const[y,m,dd]=s.split('-').map(Number);return new Date(y,m-1,dd);}
 function todayStr(){return fmt(new Date());}
 
-function blankDay(date){return{date,bedtime:'',waketime:'',wakeMid:null,nap:null,caffeine:{items:[]},workout:{type:null,exercises:[]},run:{dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null},body:{weight:null,waist:null,protein:null,water:null,steps:null,alcohol:null},cond:{pain:null,energy:null,rhr:null,stress:null},notes:''};}
-function normDay(d){ d=d||{}; if(d.wakeMid===undefined)d.wakeMid=null; if(d.nap===undefined)d.nap=null; d.caffeine=d.caffeine||{items:[]}; d.workout=d.workout||{type:null,exercises:[]}; d.run=d.run||{dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null}; d.body=d.body||{weight:null,waist:null,protein:null}; if(d.body.water===undefined)d.body.water=null; if(d.body.steps===undefined)d.body.steps=null; if(d.body.alcohol===undefined)d.body.alcohol=null; d.cond=d.cond||{pain:null,energy:null}; if(d.cond.rhr===undefined)d.cond.rhr=null; if(d.cond.stress===undefined)d.cond.stress=null; if(d.notes==null)d.notes=''; return d; }
+function blankDay(date){return{date,bedtime:'',waketime:'',wakeMid:null,nap:null,caffeine:{items:[]},workout:{type:null,exercises:[],duration:null},run:{dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null},body:{weight:null,waist:null,protein:null,water:null,steps:null,alcohol:null},cond:{pain:null,energy:null,rhr:null,stress:null},notes:''};}
+function normDay(d){ d=d||{}; if(d.wakeMid===undefined)d.wakeMid=null; if(d.nap===undefined)d.nap=null; d.caffeine=d.caffeine||{items:[]}; d.workout=d.workout||{type:null,exercises:[]}; if(d.workout.duration===undefined)d.workout.duration=null; d.run=d.run||{dist:null,min:null,sec:null,hrAvg:null,hrMax:null,tag:null}; d.body=d.body||{weight:null,waist:null,protein:null}; if(d.body.water===undefined)d.body.water=null; if(d.body.steps===undefined)d.body.steps=null; if(d.body.alcohol===undefined)d.body.alcohol=null; d.cond=d.cond||{pain:null,energy:null}; if(d.cond.rhr===undefined)d.cond.rhr=null; if(d.cond.stress===undefined)d.cond.stress=null; if(d.notes==null)d.notes=''; return d; }
 
 let cur=todayStr();
 let state=blankDay(cur);
@@ -825,6 +838,7 @@ function addCaf(mg){
 /* ---------- render: training ---------- */
 function renderTypeAndPreset(){
   document.querySelectorAll('.tbtn').forEach(b=>b.classList.toggle('on', b.dataset.t===state.workout.type));
+  const _wdv=document.getElementById('workDur'); if(_wdv) _wdv.value=state.workout.duration??'';
   const pre=document.getElementById('preset'); pre.innerHTML='';
   const list = PRESETS[state.workout.type]||[];
   list.forEach(name=>{ const b=document.createElement('button'); b.className='p'; b.textContent=name; b.onclick=()=>addExercise(name); pre.appendChild(b); });
@@ -1061,6 +1075,8 @@ document.getElementById('cafItems').onclick=e=>{ const x=e.target.closest('.x');
 document.getElementById('cafClear').onclick=()=>{ state.caffeine.items=[]; renderCaf(); renderSummary(); scheduleSave(); };
 
 document.querySelectorAll('.tbtn').forEach(b=>b.onclick=()=>{ state.workout.type=(state.workout.type===b.dataset.t?null:b.dataset.t); renderTypeAndPreset(); renderStrip(); scheduleSave(); });
+(function(){ const wd=document.getElementById('workDur'); if(wd) wd.oninput=e=>{ const v=e.target.value; state.workout.duration=(v===''?null:Math.max(0,Math.round(+v))); scheduleSave(); }; })();
+window.recordWorkoutTime=function(mins){ if(!(mins>0)) return false; state.workout.duration=mins; const i=document.getElementById('workDur'); if(i) i.value=mins; scheduleSave(); return true; };
 
 const exList=document.getElementById('exerciseList');
 exList.addEventListener('input',e=>{ const t=e.target; const ei=+t.dataset.ei, f=t.dataset.f; if(ei==null||isNaN(ei))return;
@@ -1180,7 +1196,7 @@ function coachContext(){
   const tname={back:'등',chest:'가슴',legs:'하체',rest:'휴식'};
   const lines=recent.map(d=>{
     const p=[]; const ts=totalSleepMin(d); if(ts!=null)p.push('수면'+fmtH(ts)+'h');
-    if(d.workout.type)p.push(tname[d.workout.type]+(sessionVol(d)?(' '+sessionVol(d)+'kg'):''));
+    if(d.workout.type)p.push(tname[d.workout.type]+(sessionVol(d)?(' '+sessionVol(d)+'kg'):'')+(d.workout.duration?(' '+d.workout.duration+'분'):''));
     if(d.run&&(d.run.dist||runSecs(d)))p.push('러닝'+(d.run.dist?d.run.dist+'km':'')+(fmtPace(d)?(' '+fmtPace(d)+'/km'):'')+(d.run.hrAvg?(' '+d.run.hrAvg+'bpm'):''));
     if(d.body.protein)p.push('단백'+d.body.protein+'g');
     if(d.body.weight)p.push(d.body.weight+'kg');
@@ -1309,6 +1325,15 @@ document.getElementById('gemSave').onclick=()=>{
     const row=document.createElement('div'); row.className='lap';
     row.innerHTML='<span class="li">랩 '+lapN+'</span><span>'+fmt(split)+' <span style="color:var(--faint)">/ '+fmt(total)+'</span></span>';
     swLaps.prepend(row);
+  };
+  const swSave=document.getElementById('swSave');
+  if(swSave) swSave.onclick=()=>{
+    const total=elapsed+(running?Date.now()-startAt:0);
+    let mins=Math.round(total/60000); if(mins<1 && total>0) mins=1;
+    if(window.recordWorkoutTime && window.recordWorkoutTime(mins)){
+      swSave.textContent='✓ 저장됨 · '+mins+'분'; swSave.classList.add('done');
+      setTimeout(()=>{swSave.textContent='⏱ 운동 시간으로 저장'; swSave.classList.remove('done');},1800);
+    }
   };
 
   // rest timer
