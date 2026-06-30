@@ -48,19 +48,24 @@
   .datebar{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px}
   .datebar button{width:34px;height:34px;border-radius:10px;background:var(--inset);color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center}
   .datebar button:active{transform:scale(.92)}
-  .dateinfo{text-align:center;min-width:160px}
+  .dateinfo{text-align:center;min-width:160px;cursor:pointer;position:relative}
+  #dateJump{position:absolute;left:50%;top:100%;width:1px;height:1px;opacity:0;border:0;padding:0;margin:0;pointer-events:none}
+  .dcaret{color:var(--faint);font-size:11px;margin-left:3px}
   .dateinfo .dnum{font-family:var(--font-d);font-weight:600;font-size:17px}
   .dateinfo .dday{font-size:12px;color:var(--muted);margin-top:1px}
   .today-pill{font-size:10px;color:var(--amber);border:1px solid var(--amber);padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
 
   /* ---------- 7-day strip ---------- */
-  .strip{display:flex;gap:6px;padding:14px 18px 4px}
-  .sday{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;padding:4px 0}
+  .strip{display:flex;gap:6px;padding:14px 18px 4px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .strip::-webkit-scrollbar{display:none}
+  .sday{flex:0 0 auto;width:44px;scroll-snap-align:end;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;padding:4px 0}
   .sday .bar{width:100%;height:34px;border-radius:7px;background:var(--inset);position:relative;overflow:hidden;border:1px solid transparent}
   .sday .bar .fill{position:absolute;left:0;right:0;bottom:0;background:var(--line)}
   .sday.logged .bar .fill{background:var(--muted)}
   .sday .dot{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;z-index:2;box-shadow:0 0 0 1.5px var(--inset)}
-  .sday .lbl{font-size:10px;color:var(--faint);font-family:var(--font-d)}
+  .sday .lbl{font-size:10px;color:var(--faint);font-family:var(--font-d);display:flex;flex-direction:column;align-items:center;line-height:1.25}
+  .sday .dnum{font-size:9px;color:var(--faint);opacity:.65}
+  .sday.sel .dnum{color:var(--amber);opacity:1}
   .sday.sel .bar{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft)}
   .sday.sel .lbl{color:var(--amber)}
 
@@ -336,9 +341,10 @@
   </div>
   <div class="datebar">
     <button id="prev" aria-label="이전 날">‹</button>
-    <div class="dateinfo">
+    <div class="dateinfo" id="dateInfo">
       <div class="dnum" id="dnum">—</div>
       <div class="dday" id="dday"></div>
+      <input type="date" id="dateJump" aria-label="날짜 선택">
     </div>
     <button id="next" aria-label="다음 날">›</button>
   </div>
@@ -774,23 +780,33 @@ function genCode(){ const a=new Uint8Array(12); (crypto.getRandomValues?crypto.g
 function renderHeader(){
   const d=parseD(cur);
   document.getElementById('dnum').innerHTML = `${d.getMonth()+1}월 ${d.getDate()}일`+(cur===todayStr()?'<span class="today-pill">오늘</span>':'');
-  document.getElementById('dday').textContent = `${d.getFullYear()} · ${DOW[d.getDay()]}요일`;
+  document.getElementById('dday').innerHTML = `${d.getFullYear()} · ${DOW[d.getDay()]}요일 <span class="dcaret">▾</span>`;
   document.getElementById('next').style.visibility = (cur>=todayStr())?'hidden':'visible';
 }
+let _stripSel=null;
 function renderStrip(){
-  const wrap=document.getElementById('strip'); wrap.innerHTML='';
-  const base=parseD(todayStr());
-  for(let i=6;i>=0;i--){
-    const dt=new Date(base); dt.setDate(base.getDate()-i); const ds=fmt(dt);
+  const wrap=document.getElementById('strip'); const prevScroll=wrap.scrollLeft; wrap.innerHTML='';
+  const cw=Math.floor(((wrap.clientWidth||Math.min(window.innerWidth,600))-72)/7);
+  const todayD=parseD(todayStr());
+  // window: last 14 days minimum, extended back to oldest logged day, capped at 120 days
+  let startD=new Date(todayD); startD.setDate(todayD.getDate()-13);
+  const loggedKeys=Object.keys(cache).filter(k=>isLogged(cache[k]));
+  if(loggedKeys.length){ const minD=parseD(loggedKeys.sort()[0]); if(minD<startD) startD=minD; }
+  const floorD=new Date(todayD); floorD.setDate(todayD.getDate()-120); if(startD<floorD) startD=floorD;
+  const total=Math.round((todayD-startD)/86400000);
+  for(let i=total;i>=0;i--){
+    const dt=new Date(todayD); dt.setDate(todayD.getDate()-i); const ds=fmt(dt);
     const d=cache[ds]; const logged=isLogged(d); const hasRun=d&&(runSecs(d)||(d.run&&d.run.dist));
-    const el=document.createElement('button'); el.className='sday'+(logged?' logged':'')+(ds===cur?' sel':'')+(hasRun?' hasrun':'');
+    const el=document.createElement('button'); el.className='sday'+(logged?' logged':'')+(ds===cur?' sel':'')+(hasRun?' hasrun':''); el.style.width=cw+'px';
     let fillH=14; if(logged){ const sv=d?sessionVol(d):0; fillH=Math.min(100, 24+ (sv? Math.min(70, sv/120):0)); }
     const type = d&&d.workout&&d.workout.type;
     const dotColor = type==='back'?'var(--teal)':type==='chest'?'var(--amber)':type==='legs'?'var(--violet)':type==='rest'?'var(--faint)':'transparent';
-    el.innerHTML=`<div class="bar"><div class="dot" style="background:${dotColor}"></div><div class="fill" style="height:${logged?fillH:0}%"></div><div class="runmark"></div></div><div class="lbl">${DOW[dt.getDay()]}</div>`;
+    el.innerHTML=`<div class="bar"><div class="dot" style="background:${dotColor}"></div><div class="fill" style="height:${logged?fillH:0}%"></div><div class="runmark"></div></div><div class="lbl">${DOW[dt.getDay()]}<span class="dnum">${dt.getDate()}</span></div>`;
     el.onclick=()=>switchDate(ds);
     wrap.appendChild(el);
   }
+  if(_stripSel===cur){ wrap.scrollLeft=prevScroll; }
+  else { _stripSel=cur; requestAnimationFrame(()=>{ const sel=wrap.querySelector('.sday.sel'); if(sel) wrap.scrollLeft=Math.max(0, sel.offsetLeft-(wrap.clientWidth-sel.clientWidth)/2); }); }
 }
 
 /* ---------- render: today summary ---------- */
@@ -1060,6 +1076,14 @@ function switchAI(){ showView('AI'); renderChat(); setTimeout(()=>{ const i=docu
 /* ================= EVENTS ================= */
 document.getElementById('prev').onclick=()=>{ const d=parseD(cur); d.setDate(d.getDate()-1); switchDate(fmt(d)); };
 document.getElementById('next').onclick=()=>{ const d=parseD(cur); d.setDate(d.getDate()+1); if(fmt(d)<=todayStr()) switchDate(fmt(d)); };
+(function(){
+  const di=document.getElementById('dateInfo'), dj=document.getElementById('dateJump');
+  if(di&&dj){
+    di.onclick=()=>{ dj.max=todayStr(); dj.value=cur; if(dj.showPicker){ try{dj.showPicker();}catch(e){ dj.focus(); } } else { dj.focus(); dj.click(); } };
+    dj.onchange=()=>{ if(dj.value && dj.value<=todayStr()) switchDate(dj.value); };
+  }
+})();
+window.addEventListener('resize',()=>{ if(document.getElementById('strip')) renderStrip(); });
 document.getElementById('tabToday').onclick=switchToday;
 document.getElementById('tabTrend').onclick=switchTrend;
 document.getElementById('tabAI').onclick=switchAI;
